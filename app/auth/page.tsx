@@ -150,28 +150,90 @@ useEffect(() => {
 };
 
 
-  const handleRegister = async (e: React.FormEvent) => {
-    e.preventDefault()
+const handleRegister = async (e: React.FormEvent) => {
+  e.preventDefault();
 
-    if (!acceptTerms) {
-      toast.error("Please accept the Terms & Conditions")
-      return
-    }
-
-    setIsLoading(true)
-
-    const role = userType === "organization" ? "organization_user" : "student"
-    const name = userType === "organization" ? companyName : fullName
-    const result = await signup(email, password, name, role)
-
-    if (!result.success) {
-      toast.error(result.error || "Registration failed")
-    } else {
-      toast.success("Account created successfully!")
-    }
-
-    setIsLoading(false)
+  if (!acceptTerms) {
+    toast.error("Please accept the Terms & Conditions");
+    return;
   }
+
+  setIsLoading(true);
+
+  const supabase = createSupabaseBrowserClient();
+  const role = userType === "organization" ? "organization_user" : "student";
+  const name = userType === "organization" ? companyName : fullName;
+
+  try {
+    // 1) CREATE USER IN SUPABASE
+    const {
+      data: { user: createdUser },
+      error: signupErr,
+    } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        data: {
+          role,
+          full_name: name,
+          profile_complete: false,
+        },
+      },
+    });
+
+    if (signupErr || !createdUser) {
+      toast.error(signupErr?.message || "Registration failed");
+      setIsLoading(false);
+      return;
+    }
+
+    // 2) GENERATE SKILLCONNECT ID
+    const scid = `SC-${createdUser.id.replace(/-/g, "").slice(-6).toUpperCase()}`;
+
+    await supabase.auth.updateUser({
+      data: {
+        skillconnect_id: scid,
+        role,
+        full_name: name,
+        profile_complete: false,
+        is_first_login: true,
+      },
+    });
+
+    // 3) INSERT INTO PROFILE TABLE
+    if (role === "student") {
+      await supabase.from("student_profiles").insert([
+        {
+          user_id: createdUser.id,
+          full_name: name,
+          email: createdUser.email,
+          profile_strength: 0,
+        },
+      ]);
+    } else {
+      await supabase.from("organization_profiles").insert([
+        {
+          user_id: createdUser.id,
+          company_name: name,
+          contact_person: name,
+          email: createdUser.email,
+          profile_strength: 0,
+        },
+      ]);
+    }
+
+    toast.success("Account created successfully!");
+
+    // 4) REDIRECT TO FIRST LOGIN SCREEN
+    router.push("/auth/first-login");
+  } catch (err) {
+    console.error(err);
+    toast.error("Something went wrong");
+  }
+
+  setIsLoading(false);
+};
+
 
   const handleGoogleLogin = async () => {
     setIsLoading(true)

@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useEffect, type ReactNode } from "react"
+import { useEffect, type ReactNode } from "react" 
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
 import { useAuth, type UserRole } from "@/context/auth-context"
@@ -83,14 +83,20 @@ export function DashboardLayout({ children, allowedRoles }: DashboardLayoutProps
   const pathname = usePathname()
   const [mobileOpen, setMobileOpen] = useState(false)
 
-  useEffect(() => {
-    if (!isLoading && !isAuthenticated) {
-      router.push("/auth")
-    }
-  }, [isLoading, isAuthenticated, router])
+const [adminSession, setAdminSession] = useState<null | string>(null);
+
+useEffect(() => {
+  // read admin flag safely on client
+  const s = typeof window !== "undefined" ? localStorage.getItem("admin_session") : null;
+  setAdminSession(s);
+}, []);
+
 
   const getNavItems = (): NavItem[] => {
-    if (hasRole(["admin", "super_admin"])) return adminNavItems
+    const isAdmin = adminSession === "super_admin";
+
+if (isAdmin || hasRole(["admin", "super_admin"])) return adminNavItems;
+
     if (hasRole("organization_user")) return orgNavItems
     return studentNavItems
   }
@@ -108,11 +114,17 @@ export function DashboardLayout({ children, allowedRoles }: DashboardLayoutProps
     )
   }
 
-  if (!isAuthenticated) {
-    return null
-  }
+  const isAdmin = adminSession === "super_admin";
 
-  if (!hasRole(allowedRoles)) {
+if (!isAuthenticated && !isAdmin) {
+  return null; // wait until redirect happens
+}
+
+
+  
+
+if (!isAdmin && !hasRole(allowedRoles)) {
+
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="text-center max-w-md mx-auto px-4">

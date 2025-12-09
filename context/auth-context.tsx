@@ -337,7 +337,8 @@ useEffect(() => {
   );
 
   // SIGNUP: create account and profile
-  const signup = useCallback(
+// SIGNUP: create account + profile table row
+const signup = useCallback(
   async (
     email: string,
     password: string,
@@ -348,7 +349,7 @@ useEffect(() => {
       setIsLoading(true);
       const supabase = createSupabaseBrowserClient();
 
-      // 1. Create user in Supabase
+      // 1️⃣ Create Supabase user
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
@@ -357,41 +358,60 @@ useEffect(() => {
             role,
             full_name: fullName,
             must_change_password: true,
-            profile_complete: false
-          }
-        }
+            profile_complete: false,
+          },
+        },
       });
 
-      if (error) {
-  console.error("SUPABASE SIGNUP ERROR:", error);
-  setIsLoading(false);
-  return { success: false, error: error.message };
-}
+      if (error || !data.user) {
+        console.error("SUPABASE SIGNUP ERROR:", error);
+        setIsLoading(false);
+        return { success: false, error: error?.message };
+      }
 
+      const userId = data.user.id;
 
-      // 2. Generate SC-ID
-      const scId = `SC-${Math.floor(10000 + Math.random() * 90000)}`;
+      // 2️⃣ Generate SC-ID
+      const scId = `SC-${userId.replace(/-/g, "").slice(-6).toUpperCase()}`;
 
-      // 3. Attach metadata (SC-ID)
+      // 3️⃣ Update Supabase metadata properly
       await supabase.auth.updateUser({
         data: {
           role,
           full_name: fullName,
           skillconnect_id: scId,
           must_change_password: true,
-          profile_complete: false
-        }
+          profile_complete: false,
+        },
       });
 
-      // 4. Save locally
+      // 4️⃣ INSERT INTO PROFILE TABLE  
+      if (role === "student") {
+        await supabase.from("student_profiles").insert({
+          user_id: userId,
+          full_name: fullName,
+          email,
+          profile_strength: 0,
+        });
+      } else if (role === "organization_user") {
+        await supabase.from("organization_profiles").insert({
+          user_id: userId,
+          company_name: fullName,
+          contact_person: fullName,
+          email,
+          profile_strength: 0,
+        });
+      }
+
+      // 5️⃣ Construct frontend user object
       const newUser: User = {
-        id: data.user!.id,
+        id: userId,
         email,
         fullName,
         role,
         skillConnectId: scId,
         isFirstLogin: true,
-        profileComplete: false
+        profileComplete: false,
       };
 
       setUser(newUser);
@@ -400,12 +420,14 @@ useEffect(() => {
       setIsLoading(false);
       return { success: true };
     } catch (err: any) {
+      console.error("signup exception:", err);
       setIsLoading(false);
       return { success: false, error: err.message };
     }
   },
   []
 );
+
 
 
   // LOGOUT
