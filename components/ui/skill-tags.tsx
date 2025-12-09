@@ -16,21 +16,36 @@ interface SkillTagsProps {
 export function SkillTags({ value, onChange, maxTags = 5, placeholder = "Add a skill...", className }: SkillTagsProps) {
   const [inputValue, setInputValue] = useState("")
 
- const handleKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
-  if (e.key === "Enter" || e.key === ",") {
+const handleKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
+  const key = e.key;
+
+  // Normalize: mobile keyboards send different comma key values
+  const isComma =
+    key === "," ||
+    key === "Comma" ||
+    key === "Unidentified"; // some mobile keyboards
+
+  const isSubmitKey =
+    key === "Enter" ||
+    isComma ||
+    key === " " || // allow space to add skill
+    key === "Tab"; // allow tab to add skill
+
+  if (isSubmitKey) {
     e.preventDefault();
-    e.stopPropagation(); // ← THE FIX
-
     const newTag = inputValue.trim();
-
     if (newTag && !value.includes(newTag) && value.length < maxTags) {
       onChange([...value, newTag]);
       setInputValue("");
     }
-  } else if (e.key === "Backspace" && !inputValue && value.length > 0) {
+  }
+
+  // Backspace removes last tag
+  if (key === "Backspace" && !inputValue && value.length > 0) {
     onChange(value.slice(0, -1));
   }
 };
+
 
 
   const removeTag = (tagToRemove: string) => {
