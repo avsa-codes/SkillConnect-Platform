@@ -573,7 +573,7 @@ const handleRegister = async (e: React.FormEvent) => {
               </Button>
 
               <p className="text-center text-sm text-muted-foreground mt-6">
-                Demo credentials: student@demo.com / org@demo.com (any 6+ char password)
+                
               </p>
             </CardContent>
           </Card>
