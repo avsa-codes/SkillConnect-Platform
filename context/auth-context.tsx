@@ -287,6 +287,7 @@ useEffect(() => {
   }
 
   // Re-fetch session after metadata update
+  
   const { data: refreshedSession } = await supabase.auth.getSession();
 
   const built = await buildUserFromSupabase(
@@ -543,6 +544,8 @@ const changePassword = useCallback(
         if (data.skillConnectId) updates.skillconnect_id = data.skillConnectId;
         if (data.avatarUrl) updates.avatar_url = data.avatarUrl;
         if (data.isFirstLogin !== undefined) updates.must_change_password = data.isFirstLogin;
+        if (data.profileComplete !== undefined) updates.profile_complete = data.profileComplete;
+
 
         // update auth metadata
         if (Object.keys(updates).length > 0) {
@@ -565,9 +568,10 @@ const changePassword = useCallback(
         }
 
         // refresh local user
-        const {
-          data: { user: refreshed },
-        } = await supabase.auth.getUser();
+        await supabase.auth.updateUser({ data: updates });
+await supabase.auth.refreshSession(); // 💥 forces metadata update
+const { data: { user: refreshed } } = await supabase.auth.getUser();
+
 
         if (refreshed) {
           const built = await buildUserFromSupabase(supabase, refreshed);
