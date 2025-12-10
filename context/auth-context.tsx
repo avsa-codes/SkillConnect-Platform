@@ -313,15 +313,17 @@ useEffect(() => {
 
 
   // LOGIN WITH GOOGLE: triggers OAuth redirect
-const loginWithGoogle = async () => {
+const loginWithGoogle = async (role?: UserRole) => {
   await supabase.auth.signInWithOAuth({
     provider: "google",
     options: {
-      redirectTo: window.location.origin,  // RETURNS HERE
+      redirectTo: `${window.location.origin}/auth/callback?role=${role ?? ""}`,
     },
   });
 
   return { success: true };
+};
+
 };
 
 
