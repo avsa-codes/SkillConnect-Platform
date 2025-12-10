@@ -313,18 +313,32 @@ useEffect(() => {
 
 
   // LOGIN WITH GOOGLE: triggers OAuth redirect
-const loginWithGoogle = async (role?: UserRole) => {
-  await supabase.auth.signInWithOAuth({
-    provider: "google",
-    options: {
-      redirectTo: `${window.location.origin}/auth/callback?role=${role ?? ""}`,
-    },
-  });
+// LOGIN WITH GOOGLE
+const loginWithGoogle = useCallback(
+  async (role?: UserRole): Promise<{ success: boolean; error?: string }> => {
+    try {
+      const redirectUrl = `${window.location.origin}/auth/callback?role=${role ?? "student"}`;
 
-  return { success: true };
-};
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: {
+          redirectTo: redirectUrl,
+        },
+      });
 
-};
+      if (error) {
+        console.error("Google OAuth error:", error);
+        return { success: false, error: error.message };
+      }
+
+      return { success: true };
+    } catch (err: any) {
+      console.error("Google login error:", err);
+      return { success: false, error: err?.message || "Google login failed" };
+    }
+  },
+  [supabase]
+);
 
 
 
