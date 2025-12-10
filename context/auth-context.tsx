@@ -317,11 +317,12 @@ const loginWithGoogle = useCallback(
   async (role?: UserRole): Promise<{ success: boolean; error?: string }> => {
     try {
       const { error } = await supabase.auth.signInWithOAuth({
-        provider: "google",
-        options: {
-          redirectTo: `${window.location.origin}/auth?oauth=google&role=${role ?? ""}`,
-        },
-      });
+  provider: "google",
+  options: {
+    redirectTo: window.location.origin, // 🔥 ALWAYS ROOT CALLBACK
+  },
+});
+
 
       if (error) return { success: false, error: error.message };
       return { success: true };
