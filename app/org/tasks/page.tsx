@@ -27,7 +27,6 @@ export default function OrgTasksPage() {
   const [selectedTask, setSelectedTask] = useState<any | null>(null);
   const [taskToDelete, setTaskToDelete] = useState<any>(null);
 
-
   // Create task modal state + form
   const [showNew, setShowNew] = useState(false);
   const [form, setForm] = useState({
@@ -45,6 +44,17 @@ export default function OrgTasksPage() {
     positions: "1",
   });
   const [creating, setCreating] = useState(false);
+
+  // New: Student modal and completion modal states
+  const [showStudentModal, setShowStudentModal] = useState(false);
+  const [studentProfile, setStudentProfile] = useState<any | null>(null);
+  const [viewingStudentForTask, setViewingStudentForTask] = useState<any | null>(null);
+
+  const [showCompletionModal, setShowCompletionModal] = useState(false);
+  const [completionTask, setCompletionTask] = useState<any | null>(null);
+  const [completionFeedback, setCompletionFeedback] = useState("");
+  const [completionRating, setCompletionRating] = useState<number | null>(null);
+  const [completing, setCompleting] = useState(false);
 
   // load current user -> organization -> tasks
   useEffect(() => {
@@ -76,11 +86,7 @@ export default function OrgTasksPage() {
           setOrganization(orgData ?? null);
 
           // fetch tasks for this org
-          // NOTE: your tasks table uses column `org_id` (based on screenshot). query by that.
-          // const orgId = orgData?.user_id ?? orgData?.id ?? null;
           const orgId = orgData?.user_id;
- // ALWAYS use the row id from organization_profiles
-
           if (orgId) {
             const { data: tasksData, error: tasksErr } = await supabase
               .from("tasks")
@@ -92,10 +98,11 @@ export default function OrgTasksPage() {
               console.error("Error loading org tasks:", tasksErr);
               setTasks([]);
             } else {
-              // Normalize skills column to array
+              // Normalize skills & assigned_students columns to arrays
               const normalized = (tasksData || []).map((t: any) => ({
                 ...t,
                 skills: Array.isArray(t.skills) ? t.skills : (t.skills ? t.skills.split(",").map((s: string) => s.trim()) : []),
+                assigned_students: Array.isArray(t.assigned_students) ? t.assigned_students : (t.assigned_students ? [t.assigned_students] : []),
               }));
               setTasks(normalized);
             }
@@ -127,6 +134,18 @@ export default function OrgTasksPage() {
     const matchesStatus = statusFilter === "all" || (task.status ?? "pending") === statusFilter;
     return matchesSearch && matchesStatus;
   });
+
+  // Partition tasks into active and others
+  const isActiveTask = (t: any) => {
+    return (
+      (t.positions_filled || 0) > 0 ||
+      (Array.isArray(t.assigned_students) && t.assigned_students.length > 0) ||
+      t.status === "active"
+    );
+  };
+
+  const activeTasks = filteredTasks.filter(isActiveTask);
+  const otherTasks = filteredTasks.filter((t) => !isActiveTask(t));
 
   // create a new task
   const handleCreateTask = async () => {
@@ -169,7 +188,7 @@ export default function OrgTasksPage() {
         alert("Error creating task: " + (error.message || error.code));
       } else {
         // normalize and add to list
-        const normalized = { ...data, skills: Array.isArray(data.skills) ? data.skills : (data.skills ? data.skills.split(",") : []) };
+        const normalized = { ...data, skills: Array.isArray(data.skills) ? data.skills : (data.skills ? data.skills.split(",") : []), assigned_students: Array.isArray(data.assigned_students) ? data.assigned_students : [] };
         setTasks((prev) => [normalized, ...prev]);
         setShowNew(false);
         setForm({
@@ -195,47 +214,123 @@ export default function OrgTasksPage() {
     }
   };
 
+  const handleDeleteTask = async () => {
+    if (!taskToDelete) return;
 
+    const { error } = await supabase
+      .from("tasks")
+      .delete()
+      .eq("id", taskToDelete.id);
 
+    if (error) {
+      toast.error("Failed to delete task");
+      return;
+    }
 
+    setTasks((prev) => prev.filter((t) => t.id !== taskToDelete.id));
+    toast.success("Task deleted successfully!");
+    setTaskToDelete(null); // close modal
+  };
 
-const handleDeleteTask = async () => {
-  if (!taskToDelete) return;
+  async function handleViewStudent(task: any) {
+    // make sure there is an assigned student (we're in single-assigned-student mode)
+    const assigned = Array.isArray(task.assigned_students) && task.assigned_students.length > 0 ? task.assigned_students[0] : null;
+    if (!assigned) {
+      toast.error("No student assigned to this task");
+      return;
+    }
 
-  const { error } = await supabase
-    .from("tasks")
-    .delete()
-    .eq("id", taskToDelete.id);
+    setViewingStudentForTask(task);
+    setShowStudentModal(true);
+    setStudentProfile(null);
 
-  if (error) {
-    toast.error("Failed to delete task");
-    return;
+    // fetch student profile by user_id
+    const { data, error } = await supabase
+      .from("student_profiles")
+      .select("*")
+      .eq("user_id", assigned)
+      .maybeSingle();
+
+    if (error) {
+      console.error("Error fetching student profile:", error);
+      toast.error("Failed to load student profile");
+      setShowStudentModal(false);
+      setViewingStudentForTask(null);
+      return;
+    }
+
+    setStudentProfile(data);
   }
 
-  setTasks((prev) => prev.filter((t) => t.id !== taskToDelete.id));
-  toast.success("Task deleted successfully!");
-  setTaskToDelete(null); // close modal
-};
-
-
-
-function mapTaskStatus(status: string) {
-  switch (status) {
-    case "pending":
-      return "Pending Review";
-    case "open":
-      return "Open";
-    case "active":
-      return "Accepted"; // STUDENT ACCEPTED OFFER
-    case "completed":
-      return "Completed";
-    default:
-      return status;
+  function openCompletionModal(task: any) {
+    setCompletionTask(task);
+    setCompletionFeedback("");
+    setCompletionRating(null);
+    setShowCompletionModal(true);
   }
-}
 
+  async function submitCompletion() {
+    if (!completionTask) return;
+    if (completionRating == null) {
+      toast.error("Please provide a rating");
+      return;
+    }
 
+    setCompleting(true);
+    try {
+      const updates: any = {
+        org_feedback: completionFeedback || null,
+        org_rating: completionRating,
+        status: "completed",
+        completed_at: new Date().toISOString(),
+      };
 
+      const { data, error } = await supabase
+        .from("tasks")
+        .update(updates)
+        .eq("id", completionTask.id)
+        .select()
+        .single();
+
+      if (error) {
+        console.error("Error completing task:", error);
+        toast.error("Failed to mark task completed");
+        return;
+      }
+
+      // Normalize result
+      const normalized = {
+        ...data,
+        skills: Array.isArray(data.skills) ? data.skills : (data.skills ? data.skills.split(",") : []),
+        assigned_students: Array.isArray(data.assigned_students) ? data.assigned_students : (data.assigned_students ? [data.assigned_students] : []),
+      };
+
+      setTasks((prev) => prev.map((t) => (t.id === normalized.id ? normalized : t)));
+      toast.success("Task marked as completed");
+      setShowCompletionModal(false);
+      setCompletionTask(null);
+    } catch (err) {
+      console.error("Unexpected completion error:", err);
+      toast.error("Unexpected error");
+    } finally {
+      setCompleting(false);
+    }
+  }
+
+  function mapTaskStatus(status: string) {
+    switch (status) {
+      case "pending":
+        return "Pending Review";
+      case "open":
+        return "Open";
+      case "active":
+        return "Accepted";
+      case "completed":
+        return "Completed";
+      default:
+        return status;
+    }
+  }
 
   return (
     <DashboardLayout allowedRoles={["organization_user", "admin", "super_admin"]}>
@@ -245,15 +340,14 @@ function mapTaskStatus(status: string) {
             <h1 className="text-2xl font-bold text-foreground">Tasks</h1>
             <p className="text-muted-foreground">Manage your posted tasks</p>
           </div>
-         <div>
-  <Button asChild>
-    <Link href="/org/tasks/new">
-      <Plus className="mr-2 h-4 w-4" />
-      Post New Task
-    </Link>
-  </Button>
-</div>
-
+          <div>
+            <Button asChild>
+              <Link href="/org/tasks/new">
+                <Plus className="mr-2 h-4 w-4" />
+                Post New Task
+              </Link>
+            </Button>
+          </div>
         </div>
 
         <Card>
@@ -303,74 +397,132 @@ function mapTaskStatus(status: string) {
             }
           />
         ) : (
-          <div className="space-y-4">
-            {filteredTasks.map((task) => (
-              <Card key={task.id} className="hover:border-primary/30 transition-colors">
-                <CardContent className="pt-6">
-                  <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-3 mb-2">
-                        <h3>{task.title}</h3>
-<BadgeStatus status={mapTaskStatus(task.status)} />
+          <div className="space-y-8">
+            {/* Active Tasks Section */}
+            {activeTasks.length > 0 && (
+              <section>
+                <h2 className="text-lg font-semibold mb-3">Active Tasks</h2>
+                <div className="space-y-4">
+                  {activeTasks.map((task) => (
+                  <div
+  key={task.id}
+  className="w-full rounded-xl border bg-white px-5 py-3 shadow-sm hover:shadow-md transition-all duration-200 "
+>
+  <div className="flex items-center justify-between gap-4">
+    
+    {/* LEFT SIDE */}
+    <div className="flex flex-col">
+      <h3 className="text-base font-semibold text-foreground">{task.title}</h3>
+
+      <div className="flex items-center gap-2 mt-1">
+        <BadgeStatus status={mapTaskStatus(task.status)} />
+        <span className="text-sm text-muted-foreground">
+          {task.positions_filled}/{task.positions} filled
+        </span>
+      </div>
+    </div>
+
+    {/* RIGHT SIDE BUTTONS */}
+    <div className="flex items-center gap-2 shrink-0">
+      <Button
+        asChild
+        variant="outline"
+        size="sm"
+        className="rounded-lg px-3"
+      >
+        <Link href={`/org/tasks/${task.id}`}>View</Link>
+      </Button>
+
+      {task.status === "active" && (
+        <>
+          <Button
+  variant="outline"
+  size="sm"
+  className="rounded-lg px-3"
+  onClick={() => handleViewStudent(task)}
+>
+  Student
+</Button>
 
 
-                      </div>
-                      <p className="text-sm text-muted-foreground line-clamp-2 mb-3">{task.short_description}</p>
-                      <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
-                        <span className="flex items-center gap-1">
-                          <Calendar className="h-4 w-4" />
-                          {task.duration_weeks ? `${task.duration_weeks} wk` : "—"}
-                        </span>
-                        <span className="flex items-center gap-1">
-                          <Clock className="h-4 w-4" />
-                          {task.weekly_hours ?? "-"}h/week
-                        </span>
-                        <span className="flex items-center gap-1">
-                          <MapPin className="h-4 w-4" />
-                          {task.location === "remote" ? "Remote" : task.city}
-                        </span>
-                        <span className="flex items-center gap-1">
-                          <Users className="h-4 w-4" />
-                          {task.positions_filled ?? 0}/{task.positions ?? 1} filled
-                        </span>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <div className="text-right mr-4">
-                        <p className="text-lg font-semibold text-foreground">{task.salary ?? "-"}</p>
-                        <p className="text-xs text-muted-foreground capitalize">{String(task.payroll_terms ?? "").replace("-", " ")}</p>
-                      </div>
-                     <div className="flex items-center gap-3">
+          <Button
+  size="sm"
+  className="rounded-lg bg-red-600 text-white px-3 hover:bg-red-700"
+  onClick={() => openCompletionModal(task)}
+>
+  Complete
+</Button>
 
-  {/* VIEW BUTTON */}
-  <Button
-    variant="outline"
-    size="sm"
-    className="rounded-xl"
-    onClick={() => setSelectedTask(task)}
-  >
-    <Eye className="mr-2 h-4 w-4" />
-    View
-  </Button>
+        </>
+      )}
 
-  {/* DELETE BUTTON */}
-  <Button
-    variant="ghost"
-    size="icon"
-    className="text-destructive hover:bg-red-100 rounded-full"
-    onClick={() => setTaskToDelete(task)}
-
-  >
-    <Trash2 className="h-5 w-5" />
-  </Button>
-
+      <Button
+        variant="ghost"
+        size="icon"
+        onClick={() => setTaskToDelete(task)}
+        className="text-destructive hover:bg-red-100 rounded-full"
+      >
+        <Trash2 className="h-4 w-4" />
+      </Button>
+    </div>
+  </div>
 </div>
 
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+                  ))}
+                </div>
+              </section>
+            )}
+
+            {/* Other Tasks Section */}
+    {/* Other Tasks Section */}
+{otherTasks.length > 0 && (
+  <section>
+    <h2 className="text-lg font-semibold mb-3">Other Tasks</h2>
+    <div className="space-y-4">
+
+      {otherTasks.map((task) => (
+        <div
+          key={task.id}
+          className="w-full rounded-xl border bg-white px-5 py-3 shadow-sm hover:shadow-md transition-all duration-200"
+        >
+          <div className="flex items-center justify-between gap-4">
+
+            {/* LEFT SIDE */}
+            <div className="flex flex-col">
+              <h3 className="text-base font-semibold text-foreground">
+                {task.title}
+              </h3>
+            </div>
+
+            {/* RIGHT SIDE BUTTONS (same size as active tasks) */}
+            <div className="flex items-center gap-2 shrink-0">
+              <Button
+                asChild
+                variant="outline"
+                size="sm"
+                className="rounded-lg px-3"
+              >
+                <Link href={`/org/tasks/${task.id}`}>View</Link>
+              </Button>
+
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setTaskToDelete(task)}
+                className="text-destructive hover:bg-red-100 rounded-full"
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            </div>
+
+          </div>
+        </div>
+      ))}
+
+    </div>
+  </section>
+)}
+
           </div>
         )}
 
@@ -434,164 +586,238 @@ function mapTaskStatus(status: string) {
           </DialogContent>
         </Dialog>
 
-        {/* Task Detail Modal */}
+        {/* Task Detail Modal (existing) */}
         <Dialog open={!!selectedTask} onOpenChange={() => setSelectedTask(null)}>
-        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
-  {selectedTask && (
-    <>
-      <DialogHeader>
-        <DialogTitle className="text-xl font-semibold">
-          {selectedTask.title}
-        </DialogTitle>
-        <DialogDescription>
-          {selectedTask.short_description}
-        </DialogDescription>
-      </DialogHeader>
+          <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+            {selectedTask && (
+              <>
+                <DialogHeader>
+                  <DialogTitle className="text-xl font-semibold">
+                    {selectedTask.title}
+                  </DialogTitle>
+                  <DialogDescription>
+                    {selectedTask.short_description}
+                  </DialogDescription>
+                </DialogHeader>
 
-      <div className="space-y-6 mt-4">
+                <div className="space-y-6 mt-4">
+                  {/* existing modal content ... */}
+                  <div>
+                    <h4 className="font-semibold text-foreground mb-2">Full Brief</h4>
+                    <p className="text-sm text-muted-foreground whitespace-pre-wrap">
+                      {selectedTask.full_brief}
+                    </p>
+                  </div>
 
-        {/* FULL BRIEF */}
-        <div>
-          <h4 className="font-semibold text-foreground mb-2">Full Brief</h4>
-          <p className="text-sm text-muted-foreground whitespace-pre-wrap">
-            {selectedTask.full_brief}
-          </p>
-        </div>
+                  {/* other details omitted for brevity - kept as earlier */}
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="p-3 bg-muted/50 rounded-xl">
+                      <p className="text-xs text-muted-foreground">Duration (weeks)</p>
+                      <p className="font-medium">{selectedTask.duration_weeks ?? "-"}</p>
+                    </div>
+                    <div className="p-3 bg-muted/50 rounded-xl">
+                      <p className="text-xs text-muted-foreground">Weekly Hours</p>
+                      <p className="font-medium">{selectedTask.weekly_hours ?? "-"}</p>
+                    </div>
+                    <div className="p-3 bg-muted/50 rounded-xl">
+                      <p className="text-xs text-muted-foreground">Start Date</p>
+                      <p className="font-medium">{selectedTask.start_date ?? "-"}</p>
+                    </div>
+                    <div className="p-3 bg-muted/50 rounded-xl">
+                      <p className="text-xs text-muted-foreground">Location</p>
+                      <p className="font-medium">
+                        {selectedTask.location === "remote" ? "Remote" : selectedTask.city || "Onsite"}
+                      </p>
+                    </div>
+                    <div className="p-3 bg-muted/50 rounded-xl">
+                      <p className="text-xs text-muted-foreground">Students Needed</p>
+                      <p className="font-medium">{selectedTask.positions}</p>
+                    </div>
+                    <div className="p-3 bg-muted/50 rounded-xl">
+                      <p className="text-xs text-muted-foreground">Positions Filled</p>
+                      <p className="font-medium">{selectedTask.positions_filled}</p>
+                    </div>
+                  </div>
 
-        {/* REQUIREMENTS GRID */}
-        <div className="grid grid-cols-2 gap-4">
-          <div className="p-3 bg-muted/50 rounded-xl">
-            <p className="text-xs text-muted-foreground">Duration (weeks)</p>
-            <p className="font-medium">{selectedTask.duration_weeks ?? "-"}</p>
-          </div>
+                  <div>
+                    <h4 className="font-semibold mb-2">Required Skills</h4>
+                    <div className="flex flex-wrap gap-2">
+                      {(selectedTask.skills || []).map((skill: string) => (
+                        <span key={skill} className="px-3 py-1 bg-primary/10 text-primary rounded-full text-sm">
+                          {skill}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
 
-          <div className="p-3 bg-muted/50 rounded-xl">
-            <p className="text-xs text-muted-foreground">Weekly Hours</p>
-            <p className="font-medium">{selectedTask.weekly_hours ?? "-"}</p>
-          </div>
+                  <div>
+                    <h4 className="font-semibold mb-2">Compensation</h4>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="p-3 bg-muted/50 rounded-xl">
+                        <p className="text-xs text-muted-foreground">Salary / Budget</p>
+                        <p className="font-medium">{selectedTask.salary ? `₹${selectedTask.salary}` : "-"}</p>
+                      </div>
+                      <div className="p-3 bg-muted/50 rounded-xl">
+                        <p className="text-xs text-muted-foreground">Payment Terms</p>
+                        <p className="font-medium capitalize">{(selectedTask.payroll_terms || "-").replace("-", " ")}</p>
+                      </div>
+                    </div>
+                  </div>
 
-          <div className="p-3 bg-muted/50 rounded-xl">
-            <p className="text-xs text-muted-foreground">Start Date</p>
-            <p className="font-medium">{selectedTask.start_date ?? "-"}</p>
-          </div>
+                  <div className="p-4 bg-amber-50 rounded-xl border border-amber-200">
+                    <p className="text-sm text-amber-800">
+                      <span className="font-semibold">Confidential / NDA Required: </span>
+                      {selectedTask.confidential ? "Yes" : "No"}
+                    </p>
+                  </div>
 
-          <div className="p-3 bg-muted/50 rounded-xl">
-            <p className="text-xs text-muted-foreground">Location</p>
-            <p className="font-medium">
-              {selectedTask.location === "remote"
-                ? "Remote"
-                : selectedTask.city || "Onsite"}
-            </p>
-          </div>
+                  {selectedTask.attachment_urls && selectedTask.attachment_urls.length > 0 && (
+                    <div>
+                      <h4 className="font-semibold mb-2">Attachments</h4>
+                      <div className="space-y-2">
+                        {selectedTask.attachment_urls.map((url: string, i: number) => (
+                          <a key={i} href={url} target="_blank" className="text-primary underline text-sm">Attachment {i + 1}</a>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </>
+            )}
+          </DialogContent>
+        </Dialog>
 
-          <div className="p-3 bg-muted/50 rounded-xl">
-            <p className="text-xs text-muted-foreground">Students Needed</p>
-            <p className="font-medium">{selectedTask.positions}</p>
-          </div>
+        {/* Student Profile Modal */}
+        <Dialog open={showStudentModal} onOpenChange={() => { setShowStudentModal(false); setStudentProfile(null); setViewingStudentForTask(null); }}>
+          <DialogContent className="max-w-lg">
+            <DialogHeader>
+              <DialogTitle>Student Profile</DialogTitle>
+              <DialogDescription>
+                {viewingStudentForTask ? `For task: ${viewingStudentForTask.title}` : ""}
+              </DialogDescription>
+            </DialogHeader>
 
-          <div className="p-3 bg-muted/50 rounded-xl">
-            <p className="text-xs text-muted-foreground">Positions Filled</p>
-            <p className="font-medium">{selectedTask.positions_filled}</p>
-          </div>
+            <div className="space-y-4 mt-2">
+              {!studentProfile ? (
+                <div className="text-center py-8 text-muted-foreground">Loading student...</div>
+              ) : (
+                <div>
+                  <div className="flex items-center gap-4">
+                    <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center text-primary font-semibold text-lg">
+                      {studentProfile.full_name?.charAt(0) ?? "S"}
+                    </div>
+                    <div>
+                      <p className="font-medium text-foreground">{studentProfile.full_name}</p>
+                      <p className="text-sm text-muted-foreground">{studentProfile.college}</p>
+                    </div>
+                  </div>
 
-        </div>
+                  <div className="mt-4">
+                    <h4 className="font-semibold mb-1">Bio</h4>
+                    <p className="text-sm text-muted-foreground whitespace-pre-wrap">{studentProfile.bio || "No bio available"}</p>
+                  </div>
 
-        {/* SKILLS */}
-        <div>
-          <h4 className="font-semibold mb-2">Required Skills</h4>
-          <div className="flex flex-wrap gap-2">
-            {(selectedTask.skills || []).map((skill: string) => (
-              <span
-                key={skill}
-                className="px-3 py-1 bg-primary/10 text-primary rounded-full text-sm"
-              >
-                {skill}
-              </span>
-            ))}
-          </div>
-        </div>
+                  <div className="mt-4">
+                    <h4 className="font-semibold mb-1">Skills</h4>
+                    <div className="flex flex-wrap gap-2">
+                      {(Array.isArray(studentProfile.skills) ? studentProfile.skills : (studentProfile.skills ? studentProfile.skills.split(",") : [])).map((s: string) => (
+                        <span key={s} className="px-2 py-0.5 bg-muted text-muted-foreground text-xs rounded">{s}</span>
+                      ))}
+                    </div>
+                  </div>
 
-        {/* COMPENSATION */}
-        <div>
-          <h4 className="font-semibold mb-2">Compensation</h4>
-          <div className="grid grid-cols-2 gap-4">
+                  <div className="mt-4 grid grid-cols-2 gap-4">
+                    <div className="p-3 bg-muted/50 rounded-xl">
+                      <p className="text-xs text-muted-foreground">Rating</p>
+                      <p className="font-medium">{studentProfile.rating ?? "-"}</p>
+                    </div>
+                    <div className="p-3 bg-muted/50 rounded-xl">
+                      <p className="text-xs text-muted-foreground">Tasks Completed</p>
+                      <p className="font-medium">{studentProfile.tasks_completed ?? "-"}</p>
+                    </div>
+                  </div>
 
-            <div className="p-3 bg-muted/50 rounded-xl">
-              <p className="text-xs text-muted-foreground">Salary / Budget</p>
-              <p className="font-medium">
-                {selectedTask.salary ? `₹${selectedTask.salary}` : "-"}
-              </p>
+                  {studentProfile.portfolio_url && (
+                    <div className="mt-3">
+                      <a href={studentProfile.portfolio_url} target="_blank" className="text-primary underline text-sm">View Portfolio</a>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
 
-            <div className="p-3 bg-muted/50 rounded-xl">
-              <p className="text-xs text-muted-foreground">Payment Terms</p>
-              <p className="font-medium capitalize">
-                {(selectedTask.payroll_terms || "-").replace("-", " ")}
-              </p>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => { setShowStudentModal(false); setStudentProfile(null); setViewingStudentForTask(null); }}>Close</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Completion Modal */}
+        <Dialog open={showCompletionModal} onOpenChange={() => setShowCompletionModal(false)}>
+          <DialogContent className="max-w-lg">
+            <DialogHeader>
+              <DialogTitle>Mark Task as Completed</DialogTitle>
+              <DialogDescription>
+                Provide feedback and rating for the student who completed this task.
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="space-y-4 mt-2">
+              {completionTask && (
+                <>
+                  <div>
+                    <p className="font-medium">{completionTask.title}</p>
+                    <p className="text-sm text-muted-foreground">Students filled: {completionTask.positions_filled ?? 0}</p>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-muted-foreground mb-1">Rating (1-5)</label>
+                    <div className="flex items-center gap-2">
+                      {[1,2,3,4,5].map((n) => (
+                        <button
+                          key={n}
+                          onClick={() => setCompletionRating(n)}
+                          className={`px-3 py-1 rounded-full border ${completionRating === n ? "bg-amber-100 border-amber-300" : "bg-transparent border-muted"}`}
+                        >
+                          {n}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-muted-foreground mb-1">Feedback</label>
+                    <Textarea value={completionFeedback} onChange={(e) => setCompletionFeedback(e.target.value)} />
+                  </div>
+                </>
+              )}
             </div>
 
-          </div>
-        </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setShowCompletionModal(false)}>Cancel</Button>
+              <Button onClick={submitCompletion} disabled={completing}>{completing ? "Saving..." : "Submit & Complete"}</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
 
-        {/* CONFIDENTIAL / NDA */}
-        <div className="p-4 bg-amber-50 rounded-xl border border-amber-200">
-          <p className="text-sm text-amber-800">
-            <span className="font-semibold">Confidential / NDA Required: </span>
-            {selectedTask.confidential ? "Yes" : "No"}
-          </p>
-        </div>
+        {/* Delete Confirmation Modal */}
+        <Dialog open={!!taskToDelete} onOpenChange={() => setTaskToDelete(null)}>
+          <DialogContent className="max-w-sm">
+            <DialogHeader>
+              <DialogTitle>Delete Task?</DialogTitle>
+              <DialogDescription>
+                This action cannot be undone. The task will be permanently removed.
+              </DialogDescription>
+            </DialogHeader>
 
-        {/* ATTACHMENTS */}
-        {selectedTask.attachment_urls && selectedTask.attachment_urls.length > 0 && (
-          <div>
-            <h4 className="font-semibold mb-2">Attachments</h4>
-            <div className="space-y-2">
-              {selectedTask.attachment_urls.map((url: string, i: number) => (
-                <a
-                  key={i}
-                  href={url}
-                  target="_blank"
-                  className="text-primary underline text-sm"
-                >
-                  Attachment {i + 1}
-                </a>
-              ))}
-            </div>
-          </div>
-        )}
-      </div>
-    </>
-  )}
-</DialogContent>
-
+            <DialogFooter className="mt-4 flex justify-end gap-3">
+              <Button variant="outline" onClick={() => setTaskToDelete(null)}>Cancel</Button>
+              <Button variant="destructive" onClick={handleDeleteTask}>Delete</Button>
+            </DialogFooter>
+          </DialogContent>
         </Dialog>
       </div>
-
-<Dialog open={!!taskToDelete} onOpenChange={() => setTaskToDelete(null)}>
-  <DialogContent className="max-w-sm">
-    <DialogHeader>
-      <DialogTitle>Delete Task?</DialogTitle>
-      <DialogDescription>
-        This action cannot be undone. The task will be permanently removed.
-      </DialogDescription>
-    </DialogHeader>
-
-    <DialogFooter className="mt-4 flex justify-end gap-3">
-      <Button variant="outline" onClick={() => setTaskToDelete(null)}>
-        Cancel
-      </Button>
-      <Button variant="destructive" onClick={handleDeleteTask}>
-        Delete
-      </Button>
-    </DialogFooter>
-  </DialogContent>
-</Dialog>
-
-
-
     </DashboardLayout>
-
-
-
   );
 }
+

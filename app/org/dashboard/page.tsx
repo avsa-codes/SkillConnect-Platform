@@ -371,7 +371,7 @@ export default function OrgDashboard() {
         </div>
 
         {/* ACTIVE TASKS */}
-        <Card>
+        {/* <Card>
           <CardHeader className="flex flex-row items-center justify-between">
             <div>
               <CardTitle>Active Tasks</CardTitle>
@@ -414,7 +414,7 @@ export default function OrgDashboard() {
               </div>
             )}
           </CardContent>
-        </Card>
+        </Card> */}
       </div>
     </DashboardLayout>
   );
