@@ -425,9 +425,9 @@ const handleRegister = async (e: React.FormEvent) => {
                       <Label htmlFor="terms" className="text-sm leading-tight cursor-pointer">
                         I accept the{" "}
                         <Link href="/terms" className="text-primary hover:underline">
-                          Terms & Conditions
+                          Terms & Conditions.
                         </Link>
-                        {userType === "student" && " and the salary cut policy"}
+                        {userType === "student" && ""}
                         {userType === "organization" && " and replacement policy"}
                       </Label>
                     </div>

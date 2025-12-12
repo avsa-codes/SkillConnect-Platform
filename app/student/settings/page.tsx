@@ -8,6 +8,10 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Switch } from "@/components/ui/switch"
+import { createClient } from "@supabase/supabase-js";
+import { createSupabaseBrowserClient } from "@/lib/supabase-browser";
+import { useRouter } from "next/navigation";
+
 import {
   Dialog,
   DialogContent,
@@ -32,8 +36,10 @@ import { Loader2, Key, LinkIcon, Bell, Shield, Trash2 } from "lucide-react"
 
 export default function StudentSettingsPage() {
   const { user, changePassword, linkGoogleAccount } = useAuth()
-
+const router = useRouter();
   const [isPasswordOpen, setIsPasswordOpen] = useState(false)
+  const [showPwPopup, setShowPwPopup] = useState(false);
+
   const [isLoading, setIsLoading] = useState(false)
   const [passwordForm, setPasswordForm] = useState({
     currentPassword: "",
@@ -48,25 +54,98 @@ export default function StudentSettingsPage() {
     marketing: false,
   })
 
-  const handleChangePassword = async () => {
+const handleChangePassword = async () => {
+  try {
     if (passwordForm.newPassword !== passwordForm.confirmPassword) {
-      toast.error("Passwords do not match")
-      return
+      toast.error("Passwords do not match");
+      return;
     }
 
-    setIsLoading(true)
-    const result = await changePassword(passwordForm.currentPassword, passwordForm.newPassword)
+    setIsLoading(true);
+    const supabase = createSupabaseBrowserClient();
 
-    if (result.success) {
-      toast.success("Password changed successfully!")
-      setIsPasswordOpen(false)
-      setPasswordForm({ currentPassword: "", newPassword: "", confirmPassword: "" })
-    } else {
-      toast.error(result.error || "Failed to change password")
+    console.log("[pw] calling supabase.auth.updateUser...");
+    const { error, data } = await supabase.auth.updateUser({
+      password: passwordForm.newPassword,
+    });
+    console.log("[pw] supabase.updateUser result:", { error, data });
+
+    setIsLoading(false);
+
+    if (error) {
+      console.error("[pw] update error:", error);
+      toast.error(error.message || "Failed to change password");
+      return;
     }
 
-    setIsLoading(false)
+    // 1) close modal state immediately
+    try {
+      setIsPasswordOpen(false);
+      console.log("[pw] setIsPasswordOpen(false) called");
+    } catch (err) {
+      console.warn("[pw] setIsPasswordOpen failed", err);
+    }
+
+    // 2) force Next.js client refresh (if layout is caching)
+    try {
+      router.refresh();
+      console.log("[pw] router.refresh() called");
+    } catch (err) {
+      console.warn("[pw] router.refresh failed", err);
+    }
+
+    // 3) best-effort: close any open dialog DOM nodes (bubble-safe)
+    try {
+      // many UI libs add data-state="open" to dialog roots; try a few selectors
+      setTimeout(() => {
+        document.querySelectorAll('[data-state="open"], dialog[open]').forEach((el) => {
+          try {
+            // prefer clicking close buttons inside the dialog if present
+            const closeBtn = (el as HTMLElement).querySelector('[aria-label="Close"], button[data-close], button[data-state="close"], button:has(svg[aria-hidden="true"])');
+            if (closeBtn) (closeBtn as HTMLElement).click();
+            else (el as HTMLElement).dispatchEvent(new Event("close"));
+          } catch (e) {
+            // fallback: blur / remove attribute
+            try { (el as HTMLElement).removeAttribute("open"); } catch {}
+          }
+        });
+        console.log("[pw] attempted DOM dialog close");
+      }, 40);
+    } catch (err) {
+      console.warn("[pw] DOM close attempt failed", err);
+    }
+
+    // 4) show success toast so user sees immediate feedback
+    // toast.success("Password changed successfully — you'll be signed out to re-login.");
+    setShowPwPopup(true);
+setTimeout(() => setShowPwPopup(false), 2000); // hide automatically
+
+
+    // 5) reset fields
+    setPasswordForm({ currentPassword: "", newPassword: "", confirmPassword: "" });
+
+    // 6) sign out then force full navigation to /auth (hard reload)
+    setTimeout(async () => {
+      try {
+        console.log("[pw] signing out...");
+        await supabase.auth.signOut();
+      } catch (err) {
+        console.warn("[pw] signOut error", err);
+      } finally {
+        // use location.replace to force a full navigation (no back entry)
+        window.location.replace("/auth");
+      }
+    }, 900);
+  } catch (err) {
+    console.error("[pw] unexpected error", err);
+    setIsLoading(false);
+    toast.error("Unexpected error. Check console.");
   }
+};
+
+
+
+
 
   const handleLinkGoogle = async () => {
     setIsLoading(true)
@@ -81,9 +160,28 @@ export default function StudentSettingsPage() {
     setIsLoading(false)
   }
 
-  const handleDeleteAccount = () => {
-    toast.success("Account deletion requested (UI only)")
+ const handleDeleteAccount = async () => {
+  if (!user) {
+    toast.error("User not found");
+    return;
   }
+
+  const res = await fetch("/api/student/delete-account", {
+    method: "POST",
+    body: JSON.stringify({ userId: user.id }),
+  });
+
+  const data = await res.json();
+
+  if (!res.ok) {
+    toast.error(data.error || "Failed to delete account");
+    return;
+  }
+
+  toast.success("Account deleted successfully!");
+  window.location.href = "/auth"; // logout redirect
+};
+
 
   return (
     <DashboardLayout allowedRoles={["student"]}>
@@ -214,7 +312,7 @@ export default function StudentSettingsPage() {
               <Switch defaultChecked />
             </div>
 
-            <div className="flex items-center justify-between">
+            {/* <div className="flex items-center justify-between">
               <div>
                 <p className="font-medium">Download Data</p>
                 <p className="text-sm text-muted-foreground">Get a copy of your data</p>
@@ -222,7 +320,7 @@ export default function StudentSettingsPage() {
               <Button variant="outline" size="sm" className="rounded-xl bg-transparent">
                 Request
               </Button>
-            </div>
+            </div> */}
           </CardContent>
         </Card>
 
@@ -257,9 +355,12 @@ export default function StudentSettingsPage() {
                   </AlertDialogHeader>
                   <AlertDialogFooter>
                     <AlertDialogCancel className="rounded-xl">Cancel</AlertDialogCancel>
-                    <AlertDialogAction onClick={handleDeleteAccount} className="rounded-xl">
-                      Delete Account
-                    </AlertDialogAction>
+                    <AlertDialogAction
+  onClick={handleDeleteAccount}
+  className="rounded-xl bg-red-600 text-white hover:bg-red-700"
+>
+  Delete Account
+</AlertDialogAction>
                   </AlertDialogFooter>
                 </AlertDialogContent>
               </AlertDialog>
@@ -320,6 +421,18 @@ export default function StudentSettingsPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      {/* Small popup confirmation */}
+{showPwPopup && (
+  <div className="fixed bottom-6 right-6 z-[200] bg-white shadow-xl border border-gray-200 rounded-xl px-4 py-3 flex items-center gap-3 animate-in fade-in slide-in-from-bottom-4">
+    <div className="h-8 w-8 rounded-full bg-green-100 flex items-center justify-center">
+      <svg className="h-5 w-5 text-green-600" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+      </svg>
+    </div>
+    <p className="text-sm font-medium text-gray-800">Password changed successfully!</p>
+  </div>
+)}
+
     </DashboardLayout>
   )
 }

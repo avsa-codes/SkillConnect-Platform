@@ -404,26 +404,71 @@ export default function OrgTasksPage() {
                 <h2 className="text-lg font-semibold mb-3">Active Tasks</h2>
                 <div className="space-y-4">
                   {activeTasks.map((task) => (
-                  <div
+<div
   key={task.id}
-  className="w-full rounded-xl border bg-white px-5 py-3 shadow-sm hover:shadow-md transition-all duration-200 "
+  className="w-full rounded-xl border bg-white px-5 py-4 shadow-sm hover:shadow-md transition-all duration-200"
 >
-  <div className="flex items-center justify-between gap-4">
-    
-    {/* LEFT SIDE */}
-    <div className="flex flex-col">
-      <h3 className="text-base font-semibold text-foreground">{task.title}</h3>
+  <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
 
-      <div className="flex items-center gap-2 mt-1">
+    {/* LEFT SECTION */}
+    <div className="flex-1 space-y-1">
+      {/* Title + Status */}
+      <div className="flex items-center gap-2 flex-wrap">
+        <h3 className="text-base font-semibold text-gray-900">
+          {task.title}
+        </h3>
+
         <BadgeStatus status={mapTaskStatus(task.status)} />
-        <span className="text-sm text-muted-foreground">
+      </div>
+
+      {/* Meta Info Row */}
+      <div className="flex flex-wrap gap-4 text-sm text-gray-500">
+        <span className="flex items-center gap-1">
+          <Users className="h-4 w-4 text-gray-400" />
           {task.positions_filled}/{task.positions} filled
         </span>
+
+        {task.start_date && (
+          <span className="flex items-center gap-1">
+            <Calendar className="h-4 w-4 text-gray-400" />
+            Starts: {new Date(task.start_date).toLocaleDateString()}
+          </span>
+        )}
+
+        {task.weekly_hours && (
+          <span className="flex items-center gap-1">
+            <Clock className="h-4 w-4 text-gray-400" />
+            {task.weekly_hours} hrs/week
+          </span>
+        )}
+
+        {(task.city || task.location) && (
+          <span className="flex items-center gap-1">
+            <MapPin className="h-4 w-4 text-gray-400" />
+            {task.location === "remote" ? "Remote" : task.city}
+          </span>
+        )}
       </div>
+
+      {/* Skills */}
+      {(task.skills || []).length > 0 && (
+        <div className="flex flex-wrap gap-2 mt-1">
+          {task.skills.slice(0, 3).map((skill: string) => (
+            <span
+              key={skill}
+              className="px-2 py-0.5 bg-orange-50 text-orange-600 text-xs rounded-full"
+            >
+              {skill}
+            </span>
+          ))}
+        </div>
+      )}
     </div>
+
 
     {/* RIGHT SIDE BUTTONS */}
     <div className="flex items-center gap-2 shrink-0">
+      {/* VIEW */}
       <Button
         asChild
         variant="outline"
@@ -433,40 +478,42 @@ export default function OrgTasksPage() {
         <Link href={`/org/tasks/${task.id}`}>View</Link>
       </Button>
 
+      {/* If Active → Show Student & Complete */}
       {task.status === "active" && (
         <>
           <Button
-  variant="outline"
-  size="sm"
-  className="rounded-lg px-3"
-  onClick={() => handleViewStudent(task)}
->
-  Student
-</Button>
-
+            variant="outline"
+            size="sm"
+            className="rounded-lg px-3"
+            onClick={() => handleViewStudent(task)}
+          >
+            Student
+          </Button>
 
           <Button
-  size="sm"
-  className="rounded-lg bg-red-600 text-white px-3 hover:bg-red-700"
-  onClick={() => openCompletionModal(task)}
->
-  Complete
-</Button>
-
+            size="sm"
+            className="rounded-lg bg-orange-500 text-white px-3 hover:bg-orange-600"
+            onClick={() => openCompletionModal(task)}
+          >
+            Complete
+          </Button>
         </>
       )}
 
+      {/* DELETE */}
       <Button
         variant="ghost"
         size="icon"
         onClick={() => setTaskToDelete(task)}
-        className="text-destructive hover:bg-red-100 rounded-full"
+        className="text-red-600 hover:bg-red-100 rounded-full"
       >
         <Trash2 className="h-4 w-4" />
       </Button>
     </div>
+
   </div>
 </div>
+
 
                   ))}
                 </div>
@@ -481,42 +528,116 @@ export default function OrgTasksPage() {
     <div className="space-y-4">
 
       {otherTasks.map((task) => (
-        <div
-          key={task.id}
-          className="w-full rounded-xl border bg-white px-5 py-3 shadow-sm hover:shadow-md transition-all duration-200"
-        >
-          <div className="flex items-center justify-between gap-4">
+      <div
+  key={task.id}
+  className="w-full rounded-xl border bg-white px-5 py-4 shadow-sm hover:shadow-md transition-all duration-200"
+>
+  <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
 
-            {/* LEFT SIDE */}
-            <div className="flex flex-col">
-              <h3 className="text-base font-semibold text-foreground">
-                {task.title}
-              </h3>
-            </div>
+    {/* LEFT SECTION */}
+    <div className="flex-1 space-y-1">
+      {/* Title + Status */}
+      <div className="flex items-center gap-2 flex-wrap">
+        <h3 className="text-base font-semibold text-gray-900">
+          {task.title}
+        </h3>
 
-            {/* RIGHT SIDE BUTTONS (same size as active tasks) */}
-            <div className="flex items-center gap-2 shrink-0">
-              <Button
-                asChild
-                variant="outline"
-                size="sm"
-                className="rounded-lg px-3"
-              >
-                <Link href={`/org/tasks/${task.id}`}>View</Link>
-              </Button>
+        <BadgeStatus status={mapTaskStatus(task.status)} />
+      </div>
 
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => setTaskToDelete(task)}
-                className="text-destructive hover:bg-red-100 rounded-full"
-              >
-                <Trash2 className="h-4 w-4" />
-              </Button>
-            </div>
+      {/* Meta Info Row */}
+      <div className="flex flex-wrap gap-4 text-sm text-gray-500">
+        <span className="flex items-center gap-1">
+          <Users className="h-4 w-4 text-gray-400" />
+          {task.positions_filled}/{task.positions} filled
+        </span>
 
-          </div>
+        {task.start_date && (
+          <span className="flex items-center gap-1">
+            <Calendar className="h-4 w-4 text-gray-400" />
+            Starts: {new Date(task.start_date).toLocaleDateString()}
+          </span>
+        )}
+
+        {task.weekly_hours && (
+          <span className="flex items-center gap-1">
+            <Clock className="h-4 w-4 text-gray-400" />
+            {task.weekly_hours} hrs/week
+          </span>
+        )}
+
+        {(task.city || task.location) && (
+          <span className="flex items-center gap-1">
+            <MapPin className="h-4 w-4 text-gray-400" />
+            {task.location === "remote" ? "Remote" : task.city}
+          </span>
+        )}
+      </div>
+
+      {/* Skills */}
+      {(task.skills || []).length > 0 && (
+        <div className="flex flex-wrap gap-2 mt-1">
+          {task.skills.slice(0, 3).map((skill: string) => (
+            <span
+              key={skill}
+              className="px-2 py-0.5 bg-orange-50 text-orange-600 text-xs rounded-full"
+            >
+              {skill}
+            </span>
+          ))}
         </div>
+      )}
+    </div>
+
+
+    {/* RIGHT SIDE BUTTONS */}
+    <div className="flex items-center gap-2 shrink-0">
+      {/* VIEW */}
+      <Button
+        asChild
+        variant="outline"
+        size="sm"
+        className="rounded-lg px-3"
+      >
+        <Link href={`/org/tasks/${task.id}`}>View</Link>
+      </Button>
+
+      {/* If Active → Show Student & Complete */}
+      {task.status === "active" && (
+        <>
+          <Button
+            variant="outline"
+            size="sm"
+            className="rounded-lg px-3"
+            onClick={() => handleViewStudent(task)}
+          >
+            Student
+          </Button>
+
+          <Button
+            size="sm"
+            className="rounded-lg bg-orange-500 text-white px-3 hover:bg-orange-600"
+            onClick={() => openCompletionModal(task)}
+          >
+            Complete
+          </Button>
+        </>
+      )}
+
+      {/* DELETE */}
+      <Button
+        variant="ghost"
+        size="icon"
+        onClick={() => setTaskToDelete(task)}
+        className="text-red-600 hover:bg-red-100 rounded-full"
+      >
+        <Trash2 className="h-4 w-4" />
+      </Button>
+    </div>
+
+  </div>
+</div>
+
       ))}
 
     </div>

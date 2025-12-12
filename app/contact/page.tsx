@@ -26,17 +26,46 @@ export default function ContactPage() {
     message: "",
   })
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setIsLoading(true)
+const handleSubmit = async (e: React.FormEvent) => {
+  e.preventDefault()
+  setIsLoading(true)
 
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 1000))
+  try {
+    const res = await fetch("/api/contact", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(formData),
+    })
 
-    toast.success("Message sent successfully (UI only)")
+    const data = await res.json()
+
+    if (!res.ok) {
+      toast.error(data.error || "Something went wrong")
+      setIsLoading(false)
+      return
+    }
+
+    toast.success("Message sent successfully!")
     setIsSubmitted(true)
-    setIsLoading(false)
+
+    // Reset form (optional)
+    setFormData({
+      name: "",
+      email: "",
+      type: "",
+      subject: "",
+      message: "",
+    })
+
+  } catch (error) {
+    toast.error("Network error. Try again.")
   }
+
+  setIsLoading(false)
+}
+
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -69,7 +98,7 @@ export default function ContactPage() {
                     <div>
                       <p className="font-medium">Email</p>
                       <a href="mailto:support@instatask.com" className="text-muted-foreground hover:text-primary">
-                        support@instatask.com
+                        support@instatask.in
                       </a>
                     </div>
                   </div>
@@ -81,7 +110,7 @@ export default function ContactPage() {
                     <div>
                       <p className="font-medium">Phone</p>
                       <a href="tel:+919876543210" className="text-muted-foreground hover:text-primary">
-                        +91 98765 43210
+                        +91 9555803940
                       </a>
                     </div>
                   </div>

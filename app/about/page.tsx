@@ -114,8 +114,8 @@ export default function AboutPage() {
           <div className="container mx-auto px-4">
             <div className="grid grid-cols-2 md:grid-cols-4 gap-8 max-w-4xl mx-auto text-center">
               <div>
-                <p className="text-4xl md:text-5xl font-bold text-primary">500+</p>
-                <p className="text-muted-foreground mt-2">Students Placed</p>
+                <p className="text-4xl md:text-5xl font-bold text-primary">2000+</p>
+                <p className="text-muted-foreground mt-2">Students Onboarded</p>
               </div>
               <div>
                 <p className="text-4xl md:text-5xl font-bold text-primary">84</p>
@@ -126,7 +126,7 @@ export default function AboutPage() {
                 <p className="text-muted-foreground mt-2">Completion Rate</p>
               </div>
               <div>
-                <p className="text-4xl md:text-5xl font-bold text-primary">4.8</p>
+                <p className="text-4xl md:text-5xl font-bold text-primary">4.6</p>
                 <p className="text-muted-foreground mt-2">Avg Rating</p>
               </div>
             </div>

@@ -91,15 +91,25 @@ export function Navbar({ variant = "public" }: NavbarProps) {
                     Dashboard
                   </Link>
                 </DropdownMenuItem>
-                <DropdownMenuItem asChild>
-                  <Link
-                    href={`/${user?.role === "organization_user" ? "org" : user?.role === "student" ? "student" : "admin"}/settings`}
-                    className="cursor-pointer"
-                  >
-                    <Settings className="mr-2 h-4 w-4" />
-                    Settings
-                  </Link>
-                </DropdownMenuItem>
+                {user?.role === "organization_user" ? (
+  <DropdownMenuItem asChild>
+    <Link href="/org/tasks" className="cursor-pointer">
+      <LayoutDashboard className="mr-2 h-4 w-4" />
+      Tasks
+    </Link>
+  </DropdownMenuItem>
+) : (
+  <DropdownMenuItem asChild>
+    <Link
+      href={`/${user?.role === "student" ? "student" : "admin"}/settings`}
+      className="cursor-pointer"
+    >
+      <Settings className="mr-2 h-4 w-4" />
+      Settings
+    </Link>
+  </DropdownMenuItem>
+)}
+
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={() => logout()} className="cursor-pointer text-destructive">
                   <LogOut className="mr-2 h-4 w-4" />
@@ -213,3 +223,10 @@ export function Navbar({ variant = "public" }: NavbarProps) {
     </header>
   )
 }
+
+
+
+
+
+
+

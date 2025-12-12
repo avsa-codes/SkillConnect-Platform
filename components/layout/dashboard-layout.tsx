@@ -55,7 +55,7 @@ const orgNavItems: NavItem[] = [
   { href: "/org/tasks", label: "Tasks", icon: ClipboardList },
   // { href: "/org/invoices", label: "Invoices", icon: CreditCard },
   { href: "/org/profile", label: "Profile", icon: Building2 },
-  { href: "/org/settings", label: "Settings", icon: Settings },
+  // { href: "/org/settings", label: "Settings", icon: Settings },
 ]
 
 const adminNavItems: NavItem[] = [

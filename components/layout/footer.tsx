@@ -35,7 +35,7 @@ export function Footer() {
               </li>
               <li>
                 <Link href="/pricing" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
-                  Pricing
+                  {/* Pricing */}
                 </Link>
               </li>
               <li>

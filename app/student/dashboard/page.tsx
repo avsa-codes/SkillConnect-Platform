@@ -354,39 +354,87 @@ setCompletedTasks(tasksCompleted || []);
 
               {activeTasks.length > 0 ? (
                 activeTasks.map((task) => (
-                  <Card key={task.id} className="rounded-2xl">
-                    <CardContent className="p-4 sm:p-6">
-                      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2 mb-2">
-                            <h3 className="font-semibold">{task.title}</h3>
-                            <BadgeStatus status={task.status} />
-                          </div>
+                  <Card
+  key={task.id}
+  className="rounded-xl bg-white border border-gray-200 shadow-[0_4px_20px_rgba(0,0,0,0.04)] hover:shadow-[0_6px_28px_rgba(0,0,0,0.06)] transition-all duration-300 overflow-hidden"
+>
+  <div className="flex">
 
-                          <p className="text-sm text-muted-foreground mb-2">
-                            {task.organization_name}
-                          </p>
+    {/* STATUS STRIP — softer premium orange */}
+    <div className="w-2 bg-orange-400" />
 
-                          <div className="flex gap-2 flex-wrap">
-                            {(task.skills || []).slice(0, 3).map((s: string) => (
-                              <span
-                                key={s}
-                                className="px-2 py-1 bg-primary/10 text-primary text-xs rounded-full"
-                              >
-                                {s}
-                              </span>
-                            ))}
-                          </div>
-                        </div>
+    <CardContent className="p-5 flex-1">
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
 
-                        <Button variant="outline" size="sm" className="rounded-xl" asChild>
-                          <Link href={`/student/tasks/${task.id}`}>
-                            View Details <ArrowRight className="h-4 w-4 ml-1" />
-                          </Link>
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </Card>
+        {/* LEFT CONTENT */}
+        <div className="flex-1 min-w-0">
+          <div className="flex items-start gap-4 mb-3">
+
+            {/* AVATAR — soft glow, premium */}
+            <div className="h-12 w-12 rounded-xl bg-orange-500 text-white flex items-center justify-center font-bold text-xl shadow-md shadow-orange-300/40">
+              {task.title?.[0] || "T"}
+            </div>
+
+            <div className="min-w-0">
+              {/* TITLE */}
+              <h3 className="font-semibold text-xl truncate text-gray-900 tracking-tight">
+                {task.title}
+              </h3>
+
+              {/* STATUS */}
+              <div className="flex items-center mt-1">
+                <span className="h-2 w-2 rounded-full bg-orange-400 mr-2 animate-pulse"></span>
+                <p className="text-sm font-medium text-orange-600">Active Task</p>
+              </div>
+            </div>
+          </div>
+
+          {/* DATES */}
+          <p className="text-sm text-gray-500 mt-3 border-t border-gray-100 pt-3">
+            <span className="font-semibold text-gray-700">Started:</span>{" "}
+            {task.start_date
+              ? new Date(task.start_date).toLocaleDateString("en-US", {
+                  year: "numeric",
+                  month: "short",
+                  day: "numeric",
+                })
+              : "N/A"}
+            <span className="mx-2 text-gray-300">•</span>
+            <span className="font-semibold text-gray-700">Ends:</span> Ongoing
+          </p>
+        </div>
+
+        {/* TAGS */}
+        <div className="flex flex-wrap gap-2 lg:justify-end lg:max-w-[40%] mt-2 lg:mt-0">
+          {(task.skills || []).slice(0, 3).map((s: string) => (
+            <span
+              key={s}
+              className="px-3 py-1 bg-orange-50 text-orange-600 text-xs font-medium rounded-full"
+            >
+              {s}
+            </span>
+          ))}
+        </div>
+
+        {/* BUTTON — premium outline */}
+        <div className="lg:self-center lg:pl-4">
+          <Button
+            variant="outline"
+            size="lg"
+            className="rounded-full border-2 border-orange-500 text-orange-600 hover:bg-orange-50 hover:border-orange-600 transition-all w-full lg:w-auto font-medium"
+          >
+            <Link href={`/student/tasks/${task.id}`} className="flex items-center">
+              View Details
+              <ArrowRight className="h-4 w-4 ml-2" />
+            </Link>
+          </Button>
+        </div>
+
+      </div>
+    </CardContent>
+  </div>
+</Card>
+
                 ))
               ) : (
                 <Card className="rounded-2xl">
@@ -407,38 +455,86 @@ setCompletedTasks(tasksCompleted || []);
 
   {completedTasks.length > 0 ? (
     completedTasks.map((task) => (
-      <Card key={task.id} className="rounded-2xl">
-        <CardContent className="p-4 sm:p-6">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-            <div className="flex-1">
-              <div className="flex items-center gap-2 mb-2">
-                <h3 className="font-semibold">{task.title}</h3>
-                <BadgeStatus status="completed" />
-              </div>
+     <Card
+  key={task.id}
+  className="rounded-xl bg-white border border-gray-200 shadow-[0_4px_20px_rgba(0,0,0,0.03)] hover:shadow-[0_6px_26px_rgba(0,0,0,0.05)] transition-all duration-300 overflow-hidden"
+>
+  <div className="flex">
 
-              <p className="text-sm text-muted-foreground mb-2">
-                {task.organization_name}
-              </p>
+    {/* LEFT SUCCESS STRIP */}
+    <div className="w-2 bg-green-500" />
 
-              {/* Rating + Feedback */}
-              <div className="text-sm">
-                <p className="font-medium">⭐ {task.org_rating ?? "-"} / 5</p>
-                {task.org_feedback && (
-                  <p className="text-muted-foreground mt-1 line-clamp-2">
-                    “{task.org_feedback}”
-                  </p>
-                )}
-              </div>
+    <CardContent className="p-5 flex-1">
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+
+        {/* LEFT SECTION */}
+        <div className="flex-1 min-w-0">
+          <div className="flex items-start gap-4 mb-3">
+
+            {/* COMPLETION BADGE */}
+            <div className="h-12 w-12 rounded-xl bg-green-500 text-white flex items-center justify-center shadow-md shadow-green-300/40">
+              ✓
             </div>
 
-            <Button variant="outline" size="sm" className="rounded-xl" asChild>
-              <Link href={`/student/tasks/${task.id}`}>
-                View Details <ArrowRight className="h-4 w-4 ml-1" />
-              </Link>
-            </Button>
+            <div className="min-w-0">
+              <h3 className="font-semibold text-xl truncate text-gray-900 tracking-tight">
+                {task.title}
+              </h3>
+
+              <p className="text-sm font-medium text-green-600 mt-1">
+                Completed Successfully
+              </p>
+            </div>
           </div>
-        </CardContent>
-      </Card>
+
+          {/* RATING */}
+          <div className="flex items-center gap-2 mt-2">
+            <Star className="h-5 w-5 text-yellow-500 fill-yellow-500" />
+            <p className="text-sm font-medium text-gray-700">
+              {task.org_rating ? `${task.org_rating} / 5` : "Not Rated"}
+            </p>
+          </div>
+
+          {/* FEEDBACK */}
+          {task.org_feedback && (
+            <p className="text-sm text-gray-600 mt-3 italic border-l-4 border-green-200 pl-3 leading-relaxed">
+              “{task.org_feedback}”
+            </p>
+          )}
+
+          {/* COMPLETION DATE */}
+          <p className="text-xs text-gray-500 mt-4 border-t border-gray-100 pt-3">
+            Completed on:{" "}
+            {task.completed_at
+              ? new Date(task.completed_at).toLocaleDateString("en-US", {
+                  year: "numeric",
+                  month: "short",
+                  day: "numeric",
+                })
+              : "—"}
+          </p>
+        </div>
+
+        {/* VIEW DETAILS BUTTON */}
+        <div className="lg:self-center lg:pl-4">
+          <Button
+            variant="outline"
+            size="lg"
+            className="rounded-full border-2 border-green-600 text-green-600 hover:bg-green-50 transition-all w-full lg:w-auto font-medium"
+            asChild
+          >
+            <Link href={`/student/tasks/${task.id}`}>
+              View Summary
+              <ArrowRight className="h-4 w-4 ml-2" />
+            </Link>
+          </Button>
+        </div>
+
+      </div>
+    </CardContent>
+  </div>
+</Card>
+
     ))
   ) : (
     <Card className="rounded-2xl">
@@ -503,7 +599,7 @@ setCompletedTasks(tasksCompleted || []);
                 </Button>
 
                 <Button variant="ghost" className="w-full justify-start rounded-xl" asChild>
-                  <Link href="/student/earnings">View Earnings</Link>
+                  {/* <Link href="/student/earnings">View Earnings</Link> */}
                 </Button>
 
                 <Button variant="ghost" className="w-full justify-start rounded-xl" asChild>
