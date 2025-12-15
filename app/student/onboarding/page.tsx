@@ -109,14 +109,7 @@ export default function StudentOnboardingPage() {
     toast.success("Profile completed successfully!");
 
     // Update metadata in auth-context
-    const supabase = createSupabaseBrowserClient();
-
-// 🔥 refresh JWT so updated metadata is pulled
-await supabase.auth.refreshSession();
-
-// now redirect
-router.replace("/student/dashboard");
-
+    await updateProfile({ profileComplete: true });
 
     router.push("/student/dashboard");
   } catch (err) {
