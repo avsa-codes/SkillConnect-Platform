@@ -1,56 +1,61 @@
-// "use client";
+"use client";
 
-// import { useEffect } from "react";
-// import { useRouter, usePathname } from "next/navigation";
-// import { createSupabaseBrowserClient } from "@/lib/supabase-browser";
+import { useEffect } from "react";
+import { useRouter, usePathname } from "next/navigation";
+import { createSupabaseBrowserClient } from "@/lib/supabase-browser";
 
-// export default function OAuthHandler() {
-//   const router = useRouter();
-//   const pathname = usePathname();
-//   const supabase = createSupabaseBrowserClient();
+export default function OAuthHandler() {
+  const router = useRouter();
+  const pathname = usePathname();
+  const supabase = createSupabaseBrowserClient();
 
-//   useEffect(() => {
-//     async function handleOAuth() {
-//       if (typeof window === "undefined") return;
+  useEffect(() => {
+    async function handleOAuth() {
+      if (typeof window === "undefined") return;
 
-//       const url = new URL(window.location.href);
-//       const code = url.searchParams.get("code");
+      const url = new URL(window.location.href);
+      const code = url.searchParams.get("code");
 
-//       // Only run this logic when Supabase returns ?code=xxxx
-//       if (!code) return;
+      // Only run this logic when Supabase returns ?code=xxxx
+      // 🚫 Only allow this handler on /auth/callback
+if (pathname !== "/auth/callback") return;
+// 🚫 Run only once
+window.history.replaceState({}, "", pathname);
 
-//       console.log("OAuth returned with code:", code);
 
-//       // Get session restored by Supabase
-//       const { data: { session } } = await supabase.auth.getSession();
 
-//       if (!session?.user) {
-//         console.log("No session found after OAuth.");
-//         return;
-//       }
+      console.log("OAuth returned with code:", code);
 
-//       const user = session.user;
-//       const role =
-//         user.user_metadata.role ||
-//         "student"; // default if missing
+      // Get session restored by Supabase
+      const { data: { session } } = await supabase.auth.getSession();
 
-//       console.log("OAuth session restored:", { user, role });
+      if (!session?.user) {
+        console.log("No session found after OAuth.");
+        return;
+      }
 
-//       // Remove ?code= from URL
-//       window.history.replaceState({}, "", pathname);
+      const user = session.user;
+      const role =
+        user.user_metadata.role ||
+        "student"; // default if missing
 
-//       // Redirect based on role
-//       if (role === "student") {
-//         router.replace("/student/onboarding");
-//       } else if (role === "organization_user") {
-//         router.replace("/org/profile");
-//       } else {
-//         router.replace("/auth");
-//       }
-//     }
+      console.log("OAuth session restored:", { user, role });
 
-//     handleOAuth();
-//   }, []);
+      // Remove ?code= from URL
+      window.history.replaceState({}, "", pathname);
 
-//   return null;
-// }
+      // Redirect based on role
+      if (role === "student") {
+        router.replace("/student/onboarding");
+      } else if (role === "organization_user") {
+        router.replace("/org/profile");
+      } else {
+        router.replace("/auth");
+      }
+    }
+
+    handleOAuth();
+  }, []);
+
+  return null;
+}
