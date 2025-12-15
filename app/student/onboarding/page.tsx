@@ -123,10 +123,14 @@ export default function StudentOnboardingPage() {
       return;
     }
 
-    toast.success("Profile completed successfully!");
+   toast.success("Profile completed successfully!");
 
-    // Update metadata in auth-context
-    await updateProfile({ profileComplete: true });
+// Update metadata in auth-context
+await updateProfile({ profileComplete: true });
+
+// 🔥 HARD REDIRECT — no race conditions
+window.location.href = "/student/dashboard";
+
 
 // ❗ DO NOT redirect here
 // Let auth state settle
