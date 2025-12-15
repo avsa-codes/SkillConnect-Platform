@@ -85,58 +85,71 @@ export default function StudentOnboardingPage() {
   }
 
 const handleSubmit = async () => {
+  console.log("🟢 handleSubmit START");
+
+  console.log("acceptTerms =", formData.acceptTerms);
+  console.log("user =", user);
+
   if (!formData.acceptTerms) {
+    console.log("❌ BLOCKED: acceptTerms is false");
     toast.error("Please accept the Terms & Conditions");
     return;
   }
 
-  if (!user) return;
+  if (!user) {
+    console.log("❌ BLOCKED: user is null");
+    return;
+  }
 
   setIsLoading(true);
+  console.log("🟡 isLoading set TRUE");
 
   try {
-    const form = new FormData();
-    form.append("user_id", user.id);
-    form.append("full_name", formData.fullName);
-    form.append("phone", formData.phone);
-    form.append("college", formData.college);
-    form.append("city", formData.city);
-    form.append("skills", JSON.stringify(formData.skills));
-    form.append("availability", formData.availability);
-    form.append("portfolio_url", formData.portfolioUrl);
-    form.append("bio", formData.bio);
-
-    if (formData.studentIdFile) {
-      form.append("student_id_file", formData.studentIdFile);
-    }
+    console.log("🟡 Sending onboarding API request");
 
     const res = await fetch("/api/student/onboarding", {
       method: "POST",
-      body: form,
+      body: (() => {
+        const form = new FormData();
+        form.append("user_id", user.id);
+        form.append("full_name", formData.fullName);
+        form.append("phone", formData.phone);
+        form.append("college", formData.college);
+        form.append("city", formData.city);
+        form.append("skills", JSON.stringify(formData.skills));
+        form.append("availability", formData.availability);
+        form.append("portfolio_url", formData.portfolioUrl);
+        form.append("bio", formData.bio);
+        if (formData.studentIdFile) {
+          form.append("student_id_file", formData.studentIdFile);
+        }
+        return form;
+      })(),
     });
 
+    console.log("🟡 API response status =", res.status);
+
     const data = await res.json();
+    console.log("🟡 API response data =", data);
 
     if (!res.ok) {
+      console.log("❌ API FAILED");
       toast.error(data.error || "Failed to save profile");
       return;
     }
 
-    toast.success("Profile completed successfully!");
+    console.log("🟢 API SUCCESS");
 
-    // Update auth metadata
-    await updateProfile({ profileComplete: true });
-
-    // 🔥 HARD REDIRECT (correct)
-    window.location.href = "/student/dashboard";
+    console.log("🚀 REDIRECTING NOW");
+    window.location.replace("/student/dashboard");
   } catch (err) {
-    console.error(err);
-    toast.error("Something went wrong");
+    console.error("🔥 handleSubmit ERROR", err);
   } finally {
-    // ✅ ALWAYS reset loading
+    console.log("🟡 handleSubmit FINALLY");
     setIsLoading(false);
   }
 };
+
 
 
 
