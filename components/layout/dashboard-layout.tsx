@@ -120,10 +120,16 @@ if (isAdmin || hasRole(["admin", "super_admin"])) return adminNavItems;
 
 
 // 🚫 Not authenticated → auth page
-if (!user && !isAdmin) {
-  router.replace("/auth");
-  return null;
+if (!isAuthenticated && !isAdmin) {
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-background">
+      <div className="text-muted-foreground">
+        Loading session…
+      </div>
+    </div>
+  );
 }
+
 
 
 
