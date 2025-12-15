@@ -119,9 +119,12 @@ if (isAdmin || hasRole(["admin", "super_admin"])) return adminNavItems;
   const isAdmin = adminSession === "super_admin";
 
 
+// 🚫 Not authenticated → auth page
 if (!user && !isAdmin) {
+  router.replace("/auth");
   return null;
 }
+
 
 
 // 🚫 Student must complete onboarding before dashboard
