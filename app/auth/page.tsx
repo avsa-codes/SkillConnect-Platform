@@ -41,6 +41,8 @@ function AuthContent() {
   const [companyName, setCompanyName] = useState("")
   const [acceptTerms, setAcceptTerms] = useState(false)
 
+
+  
   useEffect(() => {
     const type = searchParams.get("type")
     const modeParam = searchParams.get("mode")
@@ -101,6 +103,13 @@ useEffect(() => {
       break;
   }
 }, [isAuthenticated, user, router]);
+
+
+useEffect(() => {
+  if (searchParams.get("passwordChanged") === "1") {
+    toast.success("Password changed successfully. Please log in again.");
+  }
+}, [searchParams]);
 
 
 

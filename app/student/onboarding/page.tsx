@@ -15,6 +15,8 @@ import { SkillTags } from "@/components/ui/skill-tags"
 import { FileUploader } from "@/components/ui/file-uploader"
 import { toast } from "sonner"
 import { Loader2, ArrowRight, ArrowLeft } from "lucide-react"
+import { createSupabaseBrowserClient } from "@/lib/supabase-browser";
+
 
 export default function StudentOnboardingPage() {
   const router = useRouter()
@@ -107,7 +109,14 @@ export default function StudentOnboardingPage() {
     toast.success("Profile completed successfully!");
 
     // Update metadata in auth-context
-    await updateProfile({ profileComplete: true });
+    const supabase = createSupabaseBrowserClient();
+
+// 🔥 refresh JWT so updated metadata is pulled
+await supabase.auth.refreshSession();
+
+// now redirect
+router.replace("/student/dashboard");
+
 
     router.push("/student/dashboard");
   } catch (err) {

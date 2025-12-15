@@ -8,45 +8,39 @@ import { Loader2 } from "lucide-react";
 export default function OAuthCallbackPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const supabase = createSupabaseBrowserClient();
 
   useEffect(() => {
-    async function finishOAuth() {
+    const handleOAuth = async () => {
       const code = searchParams.get("code");
       const role = searchParams.get("role") || "student";
 
-      if (!code) return;
-
-      console.log("OAuth code:", code);
-
-      // 1️⃣ Exchange code → session
-      const { error } = await supabase.auth.exchangeCodeForSession(code);
-      if (error) {
-        console.error("OAuth error:", error);
+      if (!code) {
+        router.replace("/auth");
         return;
       }
 
-      // 2️⃣ Force refresh so AuthContext gets updated IMMEDIATELY
-      await supabase.auth.getSession();
+      const supabase = createSupabaseBrowserClient();
 
-      // 3️⃣ Set metadata role immediately (Supabase does NOT do this itself)
-      await supabase.auth.updateUser({
-        data: {
-          role: role,
-          profile_complete: false,
-        },
-      });
+      const { error } = await supabase.auth.exchangeCodeForSession(code);
 
-      // 4️⃣ Redirect based on selected role
+      if (error) {
+        console.error("OAuth exchange failed:", error);
+        router.replace("/auth");
+        return;
+      }
+
+      // ✅ DO NOTHING ELSE HERE
+      // ✅ Let AuthContext pick up session
+
       if (role === "student") {
         router.replace("/student/onboarding");
       } else {
         router.replace("/org/profile");
       }
-    }
+    };
 
-    finishOAuth();
-  }, [searchParams]);
+    handleOAuth();
+  }, [router, searchParams]);
 
   return (
     <div className="flex items-center justify-center h-screen">

@@ -38,7 +38,11 @@ export default function StudentSettingsPage() {
   const { user, changePassword, linkGoogleAccount } = useAuth()
 const router = useRouter();
   const [isPasswordOpen, setIsPasswordOpen] = useState(false)
-  const [showPwPopup, setShowPwPopup] = useState(false);
+
+
+
+  
+  
 
   const [isLoading, setIsLoading] = useState(false)
   const [passwordForm, setPasswordForm] = useState({
@@ -55,93 +59,47 @@ const router = useRouter();
   })
 
 const handleChangePassword = async () => {
-  try {
-    if (passwordForm.newPassword !== passwordForm.confirmPassword) {
-      toast.error("Passwords do not match");
-      return;
-    }
+  if (passwordForm.newPassword !== passwordForm.confirmPassword) {
+    toast.error("New passwords do not match");
+    return;
+  }
 
-    setIsLoading(true);
-    const supabase = createSupabaseBrowserClient();
+  setIsLoading(true);
+  const supabase = createSupabaseBrowserClient();
 
-    console.log("[pw] calling supabase.auth.updateUser...");
-    const { error, data } = await supabase.auth.updateUser({
-      password: passwordForm.newPassword,
-    });
-    console.log("[pw] supabase.updateUser result:", { error, data });
+  const { error } = await supabase.auth.updateUser({
+    password: passwordForm.newPassword,
+  });
 
-    setIsLoading(false);
+  if (error) {
+    setIsLoading(false);
+    toast.error(error.message || "Failed to change password");
+    setPasswordForm({ ...passwordForm, newPassword: "", confirmPassword: "" }); 
+    return;
+  }
 
-    if (error) {
-      console.error("[pw] update error:", error);
-      toast.error(error.message || "Failed to change password");
-      return;
-    }
+  // --- 1. SUCCESS: Notify user and reset UI ---
+  toast.success("Password changed successfully! Redirecting...");
+  setIsLoading(false); 
+  setIsPasswordOpen(false); 
+  setPasswordForm({
+    currentPassword: "",
+    newPassword: "",
+    confirmPassword: "",
+  });
+  
+  // 2. Sign out (Required by Supabase)
+  await supabase.auth.signOut();
 
-    // 1) close modal state immediately
-    try {
-      setIsPasswordOpen(false);
-      console.log("[pw] setIsPasswordOpen(false) called");
-    } catch (err) {
-      console.warn("[pw] setIsPasswordOpen failed", err);
-    }
-
-    // 2) force Next.js client refresh (if layout is caching)
-    try {
-      router.refresh();
-      console.log("[pw] router.refresh() called");
-    } catch (err) {
-      console.warn("[pw] router.refresh failed", err);
-    }
-
-    // 3) best-effort: close any open dialog DOM nodes (bubble-safe)
-    try {
-      // many UI libs add data-state="open" to dialog roots; try a few selectors
-      setTimeout(() => {
-        document.querySelectorAll('[data-state="open"], dialog[open]').forEach((el) => {
-          try {
-            // prefer clicking close buttons inside the dialog if present
-            const closeBtn = (el as HTMLElement).querySelector('[aria-label="Close"], button[data-close], button[data-state="close"], button:has(svg[aria-hidden="true"])');
-            if (closeBtn) (closeBtn as HTMLElement).click();
-            else (el as HTMLElement).dispatchEvent(new Event("close"));
-          } catch (e) {
-            // fallback: blur / remove attribute
-            try { (el as HTMLElement).removeAttribute("open"); } catch {}
-          }
-        });
-        console.log("[pw] attempted DOM dialog close");
-      }, 40);
-    } catch (err) {
-      console.warn("[pw] DOM close attempt failed", err);
-    }
-
-    // 4) show success toast so user sees immediate feedback
-    // toast.success("Password changed successfully — you'll be signed out to re-login.");
-    setShowPwPopup(true);
-setTimeout(() => setShowPwPopup(false), 2000); // hide automatically
-
-
-    // 5) reset fields
-    setPasswordForm({ currentPassword: "", newPassword: "", confirmPassword: "" });
-
-    // 6) sign out then force full navigation to /auth (hard reload)
-    setTimeout(async () => {
-      try {
-        console.log("[pw] signing out...");
-        await supabase.auth.signOut();
-      } catch (err) {
-        console.warn("[pw] signOut error", err);
-      } finally {
-        // use location.replace to force a full navigation (no back entry)
-        window.location.replace("/auth");
-      }
-    }, 900);
-  } catch (err) {
-    console.error("[pw] unexpected error", err);
-    setIsLoading(false);
-    toast.error("Unexpected error. Check console.");
-  }
+  // 3. HARD REDIRECT to the specified URL (This is the line that guarantees navigation)
+  window.location.href = "https://skillconnect-protoype.vercel.app"; 
 };
+
+
+
+
+
+
 
 
 
@@ -421,17 +379,10 @@ setTimeout(() => setShowPwPopup(false), 2000); // hide automatically
           </DialogFooter>
         </DialogContent>
       </Dialog>
-      {/* Small popup confirmation */}
-{showPwPopup && (
-  <div className="fixed bottom-6 right-6 z-[200] bg-white shadow-xl border border-gray-200 rounded-xl px-4 py-3 flex items-center gap-3 animate-in fade-in slide-in-from-bottom-4">
-    <div className="h-8 w-8 rounded-full bg-green-100 flex items-center justify-center">
-      <svg className="h-5 w-5 text-green-600" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-      </svg>
-    </div>
-    <p className="text-sm font-medium text-gray-800">Password changed successfully!</p>
-  </div>
-)}
+
+
+    
+ 
 
     </DashboardLayout>
   )
