@@ -19,6 +19,7 @@ export function SkillTags({ value, onChange, maxTags = 5, placeholder = "Add a s
 const handleKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
   if (e.key === "Enter" || e.key === ",") {
     e.preventDefault();
+    e.stopPropagation(); // 👈 important
 
     const newTag = inputValue.trim();
 
@@ -62,13 +63,13 @@ const handleKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
         ))}
       </div>
       {value.length < maxTags && (
-        <Input
-          value={inputValue}
-          onChange={(e) => setInputValue(e.target.value)}
-          onKeyDown={handleKeyDown}
-          placeholder={placeholder}
-          className="rounded-xl"
-        />
+       <Input
+  value={inputValue}
+  onChange={(e) => setInputValue(e.target.value)}
+  onKeyDownCapture={handleKeyDown}
+  placeholder={placeholder}
+  className="rounded-xl"
+/>
       )}
       <p className="text-xs text-muted-foreground">
         Press Enter or comma to add. {value.length}/{maxTags} skills
