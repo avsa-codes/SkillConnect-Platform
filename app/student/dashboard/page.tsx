@@ -109,11 +109,7 @@ useEffect(() => {
 
 
 
-useEffect(() => {
-  if (user && user.role === "student" && user.profileComplete === false) {
-    router.replace("/student/onboarding");
-  }
-}, [user]);
+
 
 
 
@@ -264,9 +260,7 @@ setCompletedTasks(tasksCompleted || []);
   //   );
   // }
 
-  if (!user) {
-  return null; // auth will handle redirect
-}
+
 
 
   // -------------------------------------
