@@ -1,30 +1,40 @@
 "use client";
 
 import { useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { createSupabaseBrowserClient } from "@/lib/supabase-browser";
-import { Loader2 } from "lucide-react";
 
-export default function OAuthCallbackPage() {
+export default function AuthCallbackPage() {
+  const router = useRouter();
+  const supabase = createSupabaseBrowserClient();
+
   useEffect(() => {
-    const supabase = createSupabaseBrowserClient();
+    const handleAuth = async () => {
+      const { data, error } = await supabase.auth.getSession();
 
-    const finalize = async () => {
-      // ⛔ DO NOT exchange code manually
-      // Just wait for Supabase to hydrate the session
-      await supabase.auth.getSession();
+      if (error || !data.session) {
+        router.replace("/auth");
+        return;
+      }
 
-      // Let auth-context decide everything
-      window.location.replace("/auth");
+      const user = data.session.user;
+
+      // OPTIONAL (recommended): check onboarding status
+      const { data: profile } = await supabase
+        .from("students")
+        .select("onboarded")
+        .eq("id", user.id)
+        .single();
+
+      if (!profile || !profile.onboarded) {
+        router.replace("/student/onboarding");
+      } else {
+        router.replace("/student/dashboard");
+      }
     };
 
-    finalize();
-  }, []);
+    handleAuth();
+  }, [router, supabase]);
 
-  return (
-    <div className="flex items-center justify-center h-screen">
-      <Loader2 className="h-8 w-8 animate-spin text-primary" />
-    </div>
-  );
+  return null; // no UI needed
 }
-
-
