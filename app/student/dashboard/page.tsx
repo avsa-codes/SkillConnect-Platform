@@ -37,9 +37,46 @@ import {
 import { toast } from "sonner";
 
 export default function StudentDashboardPage() {
+
+  
   
   const supabase = createSupabaseBrowserClient();
-  const { user } = useAuth();
+  // const { user } = useAuth();
+
+
+const { user, isLoading } = useAuth();
+
+if (isLoading) {
+  return (
+    <DashboardLayout allowedRoles={["student"]}>
+      <div className="p-10 text-center text-muted-foreground">
+        Loading your dashboard…
+      </div>
+    </DashboardLayout>
+  );
+}
+
+if (!user) {
+  return (
+    <DashboardLayout allowedRoles={["student"]}>
+      <div className="p-10 text-center text-muted-foreground">
+        Restoring session…
+      </div>
+    </DashboardLayout>
+  );
+}
+
+
+
+useEffect(() => {
+  console.log("✅ Dashboard user READY", user);
+}, [user]);
+
+
+
+
+
+
 
   useEffect(() => {
   console.log("📊 StudentDashboard mounted", user);
