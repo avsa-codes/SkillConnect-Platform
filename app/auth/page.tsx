@@ -56,9 +56,15 @@ useEffect(() => {
   // 🚫 If you're NOT on the /auth page,
   // STOP AUTH REDIRECT LOGIC COMPLETELY.
   if (typeof window !== "undefined") {
-    if (!window.location.pathname.startsWith("/auth")) {
-      return;   // <-- This stops the flickering forever
-    }
+    const path = window.location.pathname;
+
+// 🚫 NEVER run auth redirects on callback
+if (path === "/auth/callback") return;
+
+// 🚫 Also skip forgot-password & reset pages
+if (path.startsWith("/auth/forgot-password")) return;
+if (path.startsWith("/auth/reset-password")) return;
+
   }
 
   // 🛑 Check manual admin login FIRST
