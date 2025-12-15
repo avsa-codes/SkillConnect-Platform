@@ -29,12 +29,24 @@ export default function OAuthCallbackPage() {
         return;
       }
 
-      // 2️⃣ HARD redirect (cannot be blocked by React / AuthContext)
-      if (role === "student") {
-        window.location.replace("/student/onboarding");
-      } else {
-        window.location.replace("/org/profile");
+      // 2️⃣ FETCH USER
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      // 3️⃣ 🔥 SET REQUIRED METADATA (THIS IS THE FIX)
+      if (user) {
+        await supabase.auth.updateUser({
+          data: {
+            role,                     // student
+            profile_complete: false,  // force onboarding
+            is_first_login: true,
+          },
+        });
       }
+
+      // 4️⃣ Redirect to auth (let auth-context decide)
+      window.location.replace("/auth");
     };
 
     handleOAuth();

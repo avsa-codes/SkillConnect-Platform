@@ -122,6 +122,20 @@ useEffect(() => {
 }, [searchParams]);
 
 
+useEffect(() => {
+  if (!user || !isAuthenticated) return;
+
+  // ✅ Only for Google users who don't yet have profile flags
+  if (user.role === "student" && user.profileComplete === undefined) {
+    updateProfile({
+      profileComplete: false,
+      isFirstLogin: true,
+    });
+  }
+}, [user, isAuthenticated, updateProfile]);
+
+
+
 
  const handleLogin = async (e: React.FormEvent) => {
   e.preventDefault();
