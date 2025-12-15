@@ -1,12 +1,11 @@
 "use client";
 
 import { useEffect } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { createSupabaseBrowserClient } from "@/lib/supabase-browser";
 import { Loader2 } from "lucide-react";
 
 export default function OAuthCallbackPage() {
-  const router = useRouter();
   const searchParams = useSearchParams();
 
   useEffect(() => {
@@ -15,32 +14,31 @@ export default function OAuthCallbackPage() {
       const role = searchParams.get("role") || "student";
 
       if (!code) {
-        router.replace("/auth");
+        window.location.replace("/auth");
         return;
       }
 
       const supabase = createSupabaseBrowserClient();
 
+      // 1️⃣ Exchange OAuth code for session
       const { error } = await supabase.auth.exchangeCodeForSession(code);
 
       if (error) {
         console.error("OAuth exchange failed:", error);
-        router.replace("/auth");
+        window.location.replace("/auth");
         return;
       }
 
-      // ✅ DO NOTHING ELSE HERE
-      // ✅ Let AuthContext pick up session
-
+      // 2️⃣ HARD redirect (cannot be blocked by React / AuthContext)
       if (role === "student") {
-        router.replace("/student/onboarding");
+        window.location.replace("/student/onboarding");
       } else {
-        router.replace("/org/profile");
+        window.location.replace("/org/profile");
       }
     };
 
     handleOAuth();
-  }, [router, searchParams]);
+  }, [searchParams]);
 
   return (
     <div className="flex items-center justify-center h-screen">

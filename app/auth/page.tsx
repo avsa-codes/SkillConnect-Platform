@@ -17,7 +17,21 @@ import { GraduationCap, Building2, Loader2 } from "lucide-react"
 import { createSupabaseBrowserClient } from "@/lib/supabase-browser";
 
 
+
+
+
 function AuthContent() {
+
+if (typeof window !== "undefined") {
+  const path = window.location.pathname;
+
+  // 🚨 ABSOLUTE STOP: OAuth is in progress
+  if (path.startsWith("/auth/callback")) {
+    return null;
+  }
+}
+
+
   const router = useRouter()
   const searchParams = useSearchParams()
   const {
@@ -55,17 +69,7 @@ function AuthContent() {
 useEffect(() => {
   // 🚫 If you're NOT on the /auth page,
   // STOP AUTH REDIRECT LOGIC COMPLETELY.
-  if (typeof window !== "undefined") {
-    const path = window.location.pathname;
 
-// 🚫 NEVER run auth redirects on callback
-if (path === "/auth/callback") return;
-
-// 🚫 Also skip forgot-password & reset pages
-if (path.startsWith("/auth/forgot-password")) return;
-if (path.startsWith("/auth/reset-password")) return;
-
-  }
 
   // 🛑 Check manual admin login FIRST
   if (typeof window !== "undefined") {
