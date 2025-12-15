@@ -1,21 +1,20 @@
-"use client"
+"use client";
 
-import type React from "react"
-
-import { useEffect, type ReactNode } from "react" 
-import Link from "next/link"
-import { usePathname, useRouter } from "next/navigation"
-import { useAuth, type UserRole } from "@/context/auth-context"
-import { Button } from "@/components/ui/button"
-import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet"
+import type React from "react";
+import { useEffect, useState, type ReactNode } from "react";
+import Link from "next/link";
+import { usePathname, useRouter } from "next/navigation";
+import { useAuth, type UserRole } from "@/context/auth-context";
+import { Button } from "@/components/ui/button";
+import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import { cn } from "@/lib/utils"
+} from "@/components/ui/dropdown-menu";
+import { cn } from "@/lib/utils";
 import {
   Menu,
   ChevronDown,
@@ -28,35 +27,32 @@ import {
   Building2,
   ClipboardList,
   Send,
-  Wallet,
   Database,
   RefreshCw,
   Shield,
   MessageSquare,
   Bell,
-} from "lucide-react"
-import { useState } from "react"
+} from "lucide-react";
+
+/* ------------------ NAV CONFIG ------------------ */
 
 interface NavItem {
-  href: string
-  label: string
-  icon: React.ElementType
+  href: string;
+  label: string;
+  icon: React.ElementType;
 }
 
 const studentNavItems: NavItem[] = [
   { href: "/student/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/student/profile", label: "Profile", icon: User },
-  // { href: "/student/earnings", label: "Earnings", icon: Wallet },
   { href: "/student/settings", label: "Settings", icon: Settings },
-]
+];
 
 const orgNavItems: NavItem[] = [
   { href: "/org/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/org/tasks", label: "Tasks", icon: ClipboardList },
-  // { href: "/org/invoices", label: "Invoices", icon: CreditCard },
   { href: "/org/profile", label: "Profile", icon: Building2 },
-  // { href: "/org/settings", label: "Settings", icon: Settings },
-]
+];
 
 const adminNavItems: NavItem[] = [
   { href: "/admin/dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -70,88 +66,88 @@ const adminNavItems: NavItem[] = [
   { href: "/admin/audit", label: "Audit Logs", icon: Shield },
   { href: "/admin/support", label: "Support", icon: MessageSquare },
   { href: "/admin/settings", label: "Settings", icon: Settings },
-  { href: "/admin/completed-tasks", label: "Completed Tasks", icon: Settings }
+];
 
-]
+/* ------------------ LAYOUT ------------------ */
 
 interface DashboardLayoutProps {
-  children: ReactNode
-  allowedRoles: UserRole[]
+  children: ReactNode;
+  allowedRoles: UserRole[];
 }
 
 export function DashboardLayout({ children, allowedRoles }: DashboardLayoutProps) {
+  const { user, isLoading, logout, hasRole } = useAuth();
+  const router = useRouter();
+  const pathname = usePathname();
 
-  
-  const { user, isAuthenticated, isLoading, logout, hasRole } = useAuth()
-  const router = useRouter()
-  const pathname = usePathname()
-  const [mobileOpen, setMobileOpen] = useState(false)
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const [adminSession, setAdminSession] = useState<string | null>(null);
 
-const [adminSession, setAdminSession] = useState<null | string>(null);
-
-console.log("🧠 DashboardLayout", {
-  user,
-  isAuthenticated,
-  isLoading,
-  pathname,
-});
-
-useEffect(() => {
-  // read admin flag safely on client
-  const s = typeof window !== "undefined" ? localStorage.getItem("admin_session") : null;
-  setAdminSession(s);
-}, []);
-
-
-  const getNavItems = (): NavItem[] => {
-    const isAdmin = adminSession === "super_admin";
-
-if (isAdmin || hasRole(["admin", "super_admin"])) return adminNavItems;
-
-    if (hasRole("organization_user")) return orgNavItems
-    return studentNavItems
-  }
-
-  const navItems = getNavItems()
-
-  if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="animate-pulse flex flex-col items-center gap-4">
-          <div className="h-12 w-12 rounded-full bg-primary/20" />
-          <div className="h-4 w-32 bg-muted rounded" />
-        </div>
-      </div>
-    )
-  }
+  /* -------- read admin session -------- */
+  useEffect(() => {
+    const s =
+      typeof window !== "undefined"
+        ? localStorage.getItem("admin_session")
+        : null;
+    setAdminSession(s);
+  }, []);
 
   const isAdmin = adminSession === "super_admin";
 
-
-// 🚫 Not authenticated → auth page
-if (!isAuthenticated && !isAdmin) {
-  return (
-    <div className="min-h-screen flex items-center justify-center bg-background">
-      <div className="text-muted-foreground">
-        Loading session…
-      </div>
-    </div>
-  );
-}
-
-
-
-
-
-// 🚫 Student must complete onboarding before dashboard
-
-
-
-  
-
-if (!isAdmin && !hasRole(allowedRoles)) {
-
+  /* -------- 1️⃣ loading -------- */
+  if (isLoading) {
     return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="text-muted-foreground">Loading session…</div>
+      </div>
+    );
+  }
+
+  /* -------- 2️⃣ not logged in -------- */
+  if (!user && !isAdmin) {
+    router.replace("/auth");
+    return null;
+  }
+
+  /* -------- 3️⃣ student onboarding guard -------- */
+  if (
+    user &&
+    user.role === "student" &&
+    user.profileComplete === false &&
+    pathname !== "/student/onboarding"
+  ) {
+    router.replace("/student/onboarding");
+    return null;
+  }
+
+  /* -------- 4️⃣ role guard -------- */
+  if (!isAdmin && !hasRole(allowedRoles)) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="text-center max-w-md mx-auto px-4">
+          <Shield className="h-8 w-8 text-destructive mx-auto mb-4" />
+          <h1 className="text-2xl font-bold mb-2">Access Denied</h1>
+          <p className="text-muted-foreground mb-6">
+            You do not have permission to access this page.
+          </p>
+          <Button asChild>
+            <Link href="/">Go Home</Link>
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  /* -------- nav items -------- */
+  const navItems: NavItem[] = isAdmin || hasRole(["admin", "super_admin"])
+    ? adminNavItems
+    : hasRole("organization_user")
+    ? orgNavItems
+    : studentNavItems;
+
+  /* ------------------ UI ------------------ */
+
+  return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="text-center max-w-md mx-auto px-4">
           <div className="h-16 w-16 rounded-full bg-destructive/10 flex items-center justify-center mx-auto mb-4">
