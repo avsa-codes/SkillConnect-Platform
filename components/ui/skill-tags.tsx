@@ -19,32 +19,35 @@ export function SkillTags({ value, onChange, maxTags = 5, placeholder = "Add a s
 const handleKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
   const key = e.key;
 
-  // Normalize: mobile keyboards send different comma key values
   const isComma =
     key === "," ||
     key === "Comma" ||
-    key === "Unidentified"; // some mobile keyboards
+    key === "Unidentified";
 
   const isSubmitKey =
     key === "Enter" ||
     isComma ||
-    key === " " || // allow space to add skill
-    key === "Tab"; // allow tab to add skill
+    key === "Tab"; // optional
 
   if (isSubmitKey) {
     e.preventDefault();
     const newTag = inputValue.trim();
-    if (newTag && !value.includes(newTag) && value.length < maxTags) {
+
+    if (
+      newTag &&
+      !value.includes(newTag) &&
+      value.length < maxTags
+    ) {
       onChange([...value, newTag]);
       setInputValue("");
     }
   }
 
-  // Backspace removes last tag
   if (key === "Backspace" && !inputValue && value.length > 0) {
     onChange(value.slice(0, -1));
   }
 };
+
 
 
 
