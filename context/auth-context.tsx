@@ -88,7 +88,19 @@ async function buildUserFromSupabase(
   const isFirstLogin = metadata.must_change_password === true;
 
   // 🔥 SOURCE OF TRUTH
-  let profileComplete = metadata.profile_complete === true;
+  // let profileComplete = metadata.profile_complete === true;
+  let profileComplete = false;
+
+if (role === "student") {
+  const { data } = await supabase
+    .from("student_profiles")
+    .select("profile_strength")
+    .eq("user_id", authUser.id)
+    .maybeSingle();
+
+  profileComplete = !!data && data.profile_strength > 0;
+}
+
 
   let fullName: string | undefined =
     metadata.full_name || metadata.name || undefined;
@@ -182,24 +194,7 @@ useEffect(() => {
 
   // On mount: check current session & subscribe to auth changes
 // 🔥 FIX 1: Admin login via localStorage must override Supabase auth
-useEffect(() => {
-  const adminSession =
-    typeof window !== "undefined"
-      ? localStorage.getItem("admin_session")
-      : null;
 
-  if (adminSession === "super_admin") {
-    setUser({
-      id: "local-admin",
-      email: "admin@local",
-      role: "admin",
-      fullName: "Super Admin",
-      profileComplete: true,
-      isFirstLogin: false,
-    });
-    setIsLoading(false);
-  }
-}, []);
 
 // 🔥 FIX 2: Supabase auth session ONLY applies if NOT admin
 useEffect(() => {
@@ -240,18 +235,23 @@ useEffect(() => {
         error,
       });
 
-      if (session?.user) {
-         console.log("🔵 Session user exists → building user");
-        const built = await buildUserFromSupabase(supabase, session.user);
+      // if (session?.user) {
+      //    console.log("🔵 Session user exists → building user");
+      //   const built = await buildUserFromSupabase(supabase, session.user);
 
-        if (!mounted) return;
-        console.log("🔵 Setting user from Supabase");
-        setUser(built);
-      } else {
-          console.log("🔵 No session user → setting user null");
-        if (!mounted) return;
-        setUser(null);
-      }
+      //   if (!mounted) return;
+      //   console.log("🔵 Setting user from Supabase");
+      //   setUser(built);
+      // } else {
+      //     console.log("🔵 No session user → setting user null");
+      //   if (!mounted) return;
+      //   setUser(null);
+      // }
+      if (!session?.user) {
+  if (!mounted) return;
+  setUser(null);
+}
+
     } catch (err) {
 
       console.error("Error fetching session on mount:", err);
@@ -406,7 +406,7 @@ const signup = useCallback(
   ): Promise<{ success: boolean; error?: string }> => {
     try {
       setIsLoading(true);
-      const supabase = createSupabaseBrowserClient();
+      // const supabase = createSupabaseBrowserClient();
 
       // 1️⃣ Create Supabase user
       const { data, error } = await supabase.auth.signUp({
@@ -509,7 +509,7 @@ const changePassword = useCallback(
     newPassword: string
   ): Promise<{ success: boolean; error?: string }> => {
     try {
-      const supabase = createSupabaseBrowserClient();
+      // const supabase = createSupabaseBrowserClient();
 
       if (!user?.email) {
         return { success: false, error: "User email missing" };
@@ -605,29 +605,7 @@ const changePassword = useCallback(
         if (data.profileComplete !== undefined) updates.profile_complete = data.profileComplete;
 
 
-        // update auth metadata
-//         if (Object.keys(updates).length > 0) {
-//           await supabase.auth.updateUser({ data: updates });
-//         }
 
-//         // update profile table (student or org)
-//         if (data.fullName) {
-//           if (user.role === "student") {
-//             await supabase
-//               .from("student_profiles")
-//               .update({ full_name: data.fullName })
-//               .eq("user_id", user.id);
-//           } else if (user.role === "organization_user") {
-//             await supabase
-//               .from("organization_profiles")
-//               .update({ company_name: data.fullName })
-//               .eq("user_id", user.id);
-//           }
-//         }
-
-//         // refresh local user
-//         await supabase.auth.updateUser({ data: updates });
-// await supabase.auth.refreshSession(); // 💥 forces metadata update
 if (Object.keys(updates).length > 0) {
   await supabase.auth.updateUser({ data: updates });
   await supabase.auth.refreshSession();
