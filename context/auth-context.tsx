@@ -288,9 +288,11 @@ return;
      console.log("🟠 Auth change → rebuilding user");
     const built = await buildUserFromSupabase(supabase, session.user);
     setUser(built);
+    setIsLoading(false);
   } else {
      console.log("🟠 Auth change → user null");
     setUser(null);
+    setIsLoading(false);
   }
 });
 ;
