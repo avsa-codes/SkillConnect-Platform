@@ -1,175 +1,182 @@
-"use client"
+  "use client"
 
-import { useState, useEffect } from "react"
-import { useRouter } from "next/navigation"
-import Link from "next/link"
-import { useAuth } from "@/context/auth-context"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Checkbox } from "@/components/ui/checkbox"
-import { SkillTags } from "@/components/ui/skill-tags"
-import { FileUploader } from "@/components/ui/file-uploader"
-import { toast } from "sonner"
-import { Loader2, ArrowRight, ArrowLeft } from "lucide-react"
-import { createSupabaseBrowserClient } from "@/lib/supabase-browser";
-
-
-export default function StudentOnboardingPage() {
-  const router = useRouter()
-  const { user, isAuthenticated, updateProfile } = useAuth()
-
-  const [step, setStep] = useState(1)
-  const [isLoading, setIsLoading] = useState(false)
-
-  const [formData, setFormData] = useState({
-    fullName: "",
-    email: "",
-    phone: "",
-    college: "",
-    city: "",
-    skills: [] as string[],
-    availability: "",
-    portfolioUrl: "",
-    bio: "",
-    studentIdFile: null as File | null,
-    acceptTerms: false,
-  })
+  import { useState, useEffect } from "react"
+  import { useRouter } from "next/navigation"
+  import Link from "next/link"
+  import { useAuth } from "@/context/auth-context"
+  import { Button } from "@/components/ui/button"
+  import { Input } from "@/components/ui/input"
+  import { Label } from "@/components/ui/label"
+  import { Textarea } from "@/components/ui/textarea"
+  import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+  import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+  import { Checkbox } from "@/components/ui/checkbox"
+  import { SkillTags } from "@/components/ui/skill-tags"
+  import { FileUploader } from "@/components/ui/file-uploader"
+  import { toast } from "sonner"
+  import { Loader2, ArrowRight, ArrowLeft } from "lucide-react"
+  import { createSupabaseBrowserClient } from "@/lib/supabase-browser";
 
 
+  export default function StudentOnboardingPage() {
+    const router = useRouter()
+    const { user, isAuthenticated, updateProfile } = useAuth()
 
-useEffect(() => {
-  if (!user) return;
+    const [step, setStep] = useState(1)
+    const [isLoading, setIsLoading] = useState(false)
 
-  const checkProfile = async () => {
-    const supabase = createSupabaseBrowserClient();
-
-    const { data, error } = await supabase
-      .from("student_profiles")
-      .select("profile_complete")
-      .eq("user_id", user.id)
-      .single();
-
-    if (!error && data?.profile_complete === true) {
-      router.replace("/student/dashboard");
-    }
-  };
-
-  checkProfile();
-}, [user, router]);
+    const [formData, setFormData] = useState({
+      fullName: "",
+      email: "",
+      phone: "",
+      college: "",
+      city: "",
+      skills: [] as string[],
+      availability: "",
+      portfolioUrl: "",
+      bio: "",
+      studentIdFile: null as File | null,
+      acceptTerms: false,
+    })
 
 
+
+  // useEffect(() => {
+  //   if (!user) return;
+
+  //   const checkProfile = async () => {
+  //     const supabase = createSupabaseBrowserClient();
+
+  //     const { data, error } = await supabase
+  //       .from("student_profiles")
+  //       .select("profile_complete")
+  //       .eq("user_id", user.id)
+  //       .single();
+
+  //     if (!error && data?.profile_complete === true) {
+  //       router.replace("/student/dashboard");
+  //     }
+  //   };
+
+  //   checkProfile();
+  // }, [user, router]);
 
 
 
 
 
-  useEffect(() => {
-    if (!isAuthenticated) {
-      router.push("/auth?type=student")
-    } else if (user) {
-      setFormData((prev) => ({
-        ...prev,
-        fullName: user.fullName || "",
-        email: user.email || "",
-      }))
-    }
-  }, [isAuthenticated, user, router])
 
-  const handleNext = () => {
-    if (step === 1) {
-      if (!formData.fullName || !formData.email) {
-        toast.error("Please fill in required fields")
-        return
+
+    useEffect(() => {
+      if (!isAuthenticated) {
+        router.push("/auth?type=student")
+      } else if (user) {
+        setFormData((prev) => ({
+          ...prev,
+          fullName: user.fullName || "",
+          email: user.email || "",
+        }))
       }
-    }
-    if (step === 2) {
-      if (formData.skills.length === 0 || !formData.availability) {
-        toast.error("Please add at least one skill and select availability")
-        return
-      }
-    }
-    setStep(step + 1)
-  }
+    }, [isAuthenticated, user, router])
 
-const handleSubmit = async () => {
-  console.log("🟢 handleSubmit START");
-
-  console.log("acceptTerms =", formData.acceptTerms);
-  console.log("user =", user);
-
-  if (!formData.acceptTerms) {
-    console.log("❌ BLOCKED: acceptTerms is false");
-    toast.error("Please accept the Terms & Conditions");
-    return;
-  }
-
-  if (!user) {
-    console.log("❌ BLOCKED: user is null");
-    return;
-  }
-
-  setIsLoading(true);
-  console.log("🟡 isLoading set TRUE");
-
-  try {
-    console.log("🟡 Sending onboarding API request");
-
-    const res = await fetch("/api/student/onboarding", {
-      method: "POST",
-      body: (() => {
-        const form = new FormData();
-        form.append("user_id", user.id);
-        form.append("full_name", formData.fullName);
-        form.append("phone", formData.phone);
-        form.append("college", formData.college);
-        form.append("city", formData.city);
-        form.append("skills", JSON.stringify(formData.skills));
-        form.append("availability", formData.availability);
-        form.append("portfolio_url", formData.portfolioUrl);
-        form.append("bio", formData.bio);
-        if (formData.studentIdFile) {
-          form.append("student_id_file", formData.studentIdFile);
+    const handleNext = () => {
+      if (step === 1) {
+        if (!formData.fullName || !formData.email) {
+          toast.error("Please fill in required fields")
+          return
         }
-        return form;
-      })(),
-    });
+      }
+      if (step === 2) {
+        if (formData.skills.length === 0 || !formData.availability) {
+          toast.error("Please add at least one skill and select availability")
+          return
+        }
+      }
+      setStep(step + 1)
+    }
 
-    console.log("🟡 API response status =", res.status);
+  const handleSubmit = async () => {
+    console.log("🟢 handleSubmit START");
 
-    const data = await res.json();
-    console.log("🟡 API response data =", data);
+    console.log("acceptTerms =", formData.acceptTerms);
+    console.log("user =", user);
 
-    if (!res.ok) {
-      console.log("❌ API FAILED");
-      toast.error(data.error || "Failed to save profile");
+    if (!formData.acceptTerms) {
+      console.log("❌ BLOCKED: acceptTerms is false");
+      toast.error("Please accept the Terms & Conditions");
       return;
     }
 
-    console.log("🟢 API SUCCESS");
+    if (!user) {
+      console.log("❌ BLOCKED: user is null");
+      return;
+    }
 
-    console.log("🚀 REDIRECTING NOW");
-    // 🔥 FORCE HANDOFF (Option B)
-localStorage.setItem("FORCE_STUDENT_DASHBOARD", "1");
+    setIsLoading(true);
+    console.log("🟡 isLoading set TRUE");
+
+    try {
+      console.log("🟡 Sending onboarding API request");
+
+      const res = await fetch("/api/student/onboarding", {
+        method: "POST",
+        body: (() => {
+          const form = new FormData();
+          form.append("user_id", user.id);
+          form.append("full_name", formData.fullName);
+          form.append("phone", formData.phone);
+          form.append("college", formData.college);
+          form.append("city", formData.city);
+          form.append("skills", JSON.stringify(formData.skills));
+          form.append("availability", formData.availability);
+          form.append("portfolio_url", formData.portfolioUrl);
+          form.append("bio", formData.bio);
+          if (formData.studentIdFile) {
+            form.append("student_id_file", formData.studentIdFile);
+          }
+          return form;
+        })(),
+      });
+
+      console.log("🟡 API response status =", res.status);
+
+      const data = await res.json();
+      console.log("🟡 API response data =", data);
+
+      if (!res.ok) {
+        console.log("❌ API FAILED");
+        toast.error(data.error || "Failed to save profile");
+        return;
+      }
+
+      console.log("🟢 API SUCCESS");
+
+console.log("🚀 Updating auth profile + redirecting");
+
+// 1️⃣ Sync AuthProvider with DB
+await updateProfile({ profileComplete: true });
+
+// 2️⃣ Small delay to let AuthProvider rebuild user
+await new Promise((res) => setTimeout(res, 100));
+
+// 3️⃣ Redirect
 router.replace("/student/dashboard");
 
-  } catch (err) {
-    console.error("🔥 handleSubmit ERROR", err);
-  } finally {
-    console.log("🟡 handleSubmit FINALLY");
-    setIsLoading(false);
-  }
-};
+
+    } catch (err) {
+      console.error("🔥 handleSubmit ERROR", err);
+    } finally {
+      console.log("🟡 handleSubmit FINALLY");
+      setIsLoading(false);
+    }
+  };
 
 
 
 
-  if (!user) return null
+    if (!user) return null
 
-  return (
+    return (
     <div className="min-h-screen bg-muted/30 py-8 px-4">
       <div className="max-w-2xl mx-auto">
         {/* Header */}
