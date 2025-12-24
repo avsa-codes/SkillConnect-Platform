@@ -197,7 +197,8 @@ router.replace("/auth?type=student");
 
 
 
-  if (!user) return null
+  // if (!user) return null
+if (!user && !isLoading) return null
 
   return (
     <div className="min-h-screen bg-muted/30 py-8 px-4">
