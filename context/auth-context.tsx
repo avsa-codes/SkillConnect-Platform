@@ -89,7 +89,18 @@ async function buildUserFromSupabase(
 
   // 🔥 SOURCE OF TRUTH
   // let profileComplete = metadata.profile_complete === true;
-let profileComplete = false; // UI hint only — NOT used for routing
+let profileComplete = false;
+
+if (role === "student") {
+  const { data } = await supabase
+    .from("student_profiles")
+    .select("profile_complete")
+    .eq("user_id", authUser.id)
+    .maybeSingle();
+
+  profileComplete = data?.profile_complete === true;
+}
+// UI hint only — NOT used for routing
 
 
 
