@@ -130,7 +130,7 @@ useEffect(() => {
     return null;
   }
 
-  /* -------- 3️⃣ student onboarding guard -------- */
+  /* -------- 3️⃣ student onboarding guard -------- *----------------/
   // if (
   //   user &&
   //   user.role === "student" &&
