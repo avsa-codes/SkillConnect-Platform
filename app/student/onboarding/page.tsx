@@ -41,25 +41,25 @@
 
 
 
-  // useEffect(() => {
-  //   if (!user) return;
+  useEffect(() => {
+    if (!user) return;
 
-  //   const checkProfile = async () => {
-  //     const supabase = createSupabaseBrowserClient();
+    const checkProfile = async () => {
+      const supabase = createSupabaseBrowserClient();
 
-  //     const { data, error } = await supabase
-  //       .from("student_profiles")
-  //       .select("profile_complete")
-  //       .eq("user_id", user.id)
-  //       .single();
+      const { data, error } = await supabase
+        .from("student_profiles")
+        .select("profile_complete")
+        .eq("user_id", user.id)
+        .single();
 
-  //     if (!error && data?.profile_complete === true) {
-  //       router.replace("/student/dashboard");
-  //     }
-  //   };
+      if (!error && data?.profile_complete === true) {
+        router.replace("/student/dashboard");
+      }
+    };
 
-  //   checkProfile();
-  // }, [user, router]);
+    checkProfile();
+  }, [user, router]);
 
 
 
@@ -151,17 +151,10 @@
 
       console.log("🟢 API SUCCESS");
 
-console.log("🚀 Updating auth profile + redirecting");
-
-// 1️⃣ Sync AuthProvider with DB
-await updateProfile({ profileComplete: true });
-
-// 2️⃣ Small delay to let AuthProvider rebuild user
-await new Promise((res) => setTimeout(res, 100));
-
-// 3️⃣ Redirect
-router.replace("/student/dashboard");
-
+      console.log("🚀 REDIRECTING NOW");
+      // 🔥 FORCE HANDOFF (Option B)
+  localStorage.setItem("FORCE_STUDENT_DASHBOARD", "1");
+  router.replace("/student/dashboard");
 
     } catch (err) {
       console.error("🔥 handleSubmit ERROR", err);
