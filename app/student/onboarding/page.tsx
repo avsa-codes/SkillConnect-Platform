@@ -21,6 +21,8 @@ export default function StudentOnboardingPage() {
   const router = useRouter()
   const { user, isAuthenticated, updateProfile } = useAuth()
   const [step, setStep] = useState(1)
+  const [showLoginPrompt, setShowLoginPrompt] = useState(false);
+
   const [isLoading, setIsLoading] = useState(false)
   const [formData, setFormData] = useState({
     fullName: "",
@@ -37,7 +39,7 @@ export default function StudentOnboardingPage() {
   })
 
 useEffect(() => {
-  if (!user) return;
+  if (!user || showLoginPrompt) return;
 
   const checkProfile = async () => {
     const supabase = createSupabaseBrowserClient();
@@ -140,31 +142,9 @@ const handleSubmit = async () => {
 
 console.log("🟢 API SUCCESS");
 
-const supabase = createSupabaseBrowserClient();
-
-// 🔑 get fresh auth user directly from Supabase
-const {
-  data: { user: authUser },
-} = await supabase.auth.getUser();
-
-const provider =
-  authUser?.app_metadata?.provider ||
-  authUser?.app_metadata?.providers?.[0];
-
-console.log("🔐 Auth provider:", provider);
-
-// ✅ GOOGLE users → dashboard
-if (provider === "google") {
-  router.replace("/student/dashboard");
-  return;
-}
-
-// ✅ EMAIL + PASSWORD users → sign in again
-toast.success("Profile completed successfully. Please log in to continue.");
-
-await supabase.auth.signOut();
-
-router.replace("/auth?type=student");
+toast.success("Profile completed successfully. Please sign in to continue.");
+setShowLoginPrompt(true);
+return;
 
 
   } catch (err) {
@@ -174,6 +154,33 @@ router.replace("/auth?type=student");
     setIsLoading(false);
   }
 };
+
+
+if (showLoginPrompt) {
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-background px-4">
+      <Card className="max-w-md w-full text-center">
+        <CardHeader>
+          <CardTitle>Profile Completed 🎉</CardTitle>
+          <CardDescription>
+            Your profile has been saved successfully.
+            <br />
+            Please sign in to continue.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <Button
+            className="w-full"
+            onClick={() => router.push("/auth?type=student")}
+          >
+            Go to Sign In
+          </Button>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
 
   // if (!user) return null
 if (!user && !isLoading) return null
