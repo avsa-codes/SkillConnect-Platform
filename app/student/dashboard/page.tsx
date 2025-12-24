@@ -138,34 +138,50 @@ useEffect(() => {
 useEffect(() => {
   if (!user) return;
 
+  let cancelled = false;
+
   const loadProfile = async () => {
-    const { data: profile, error } = await supabase
+    const { data, error } = await supabase
       .from("student_profiles")
       .select("*")
       .eq("user_id", user.id)
-      .single();
+      .maybeSingle();
+
+    console.log("🔍 student profile fetch:", { data, error });
+
+    if (cancelled) return;
 
     if (error) {
-      console.error("❌ Failed to load student profile:", error);
-      router.replace("/student/onboarding");
+      console.error("Profile fetch error:", error);
       return;
     }
 
-    setStudentProfile(profile);
+    if (!data) {
+      // 🔁 retry once auth/session finishes hydrating
+      setTimeout(loadProfile, 300);
+      return;
+    }
+
+    setStudentProfile(data);
   };
 
   loadProfile();
-}, [user, router]);
+
+  return () => {
+    cancelled = true;
+  };
+}, [user]);
 
 
-  useEffect(() => {
-  if (!studentProfile) return;
 
-  if (studentProfile.profile_complete !== true) {
-    console.log("🚫 Profile incomplete → redirecting to onboarding");
-    router.replace("/student/onboarding");
-  }
-}, [studentProfile]);
+//   useEffect(() => {
+//   if (!studentProfile) return;
+
+//   if (studentProfile.profile_complete !== true) {
+//     console.log("🚫 Profile incomplete → redirecting to onboarding");
+//     router.replace("/student/onboarding");
+//   }
+// }, [studentProfile]);
 
 
   // -----------------------------------------------------------
