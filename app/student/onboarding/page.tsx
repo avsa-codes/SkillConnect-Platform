@@ -149,12 +149,27 @@ const handleSubmit = async () => {
       return;
     }
 
-    console.log("🟢 API SUCCESS");
+//     console.log("🟢 API SUCCESS");
 
-    console.log("🚀 REDIRECTING NOW");
-    // 🔥 FORCE HANDOFF (Option B)
-localStorage.setItem("FORCE_STUDENT_DASHBOARD", "1");
-router.replace("/student/dashboard");
+//     console.log("🚀 REDIRECTING NOW");
+//     // 🔥 FORCE HANDOFF (Option B)
+// localStorage.setItem("FORCE_STUDENT_DASHBOARD", "1");
+// router.replace("/student/dashboard");
+
+
+//LATEST CHANGE
+console.log("🟢 API SUCCESS");
+
+// ✅ Tell user clearly what’s happening
+toast.success("Profile completed successfully. Please log in to continue.");
+const supabase = createSupabaseBrowserClient();
+
+// ✅ Sign out ONLY this new email+password session
+await supabase.auth.signOut();
+
+// ✅ Redirect to sign-in page
+router.replace("/auth?type=student&from=onboarding");
+//LATEST CHANGE
 
   } catch (err) {
     console.error("🔥 handleSubmit ERROR", err);
