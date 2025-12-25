@@ -138,31 +138,37 @@ const handleSubmit = async () => {
       return;
     }
 //Starts from here 
+//START IS HAPPENING FROM HERE
 console.log("🟢 API SUCCESS");
 
 const supabase = createSupabaseBrowserClient();
 
-// ⏳ wait until session is hydrated (email+password needs this)
-let attempts = 0;
-let session = null;
+// 🔑 Get REAL Supabase user (not context user)
+const { data: userData, error: userError } = await supabase.auth.getUser();
 
-while (!session && attempts < 10) {
-  const { data } = await supabase.auth.getSession();
-  session = data.session;
-  if (!session) {
-    await new Promise((r) => setTimeout(r, 150));
-    attempts++;
-  }
-}
-
-if (!session) {
-  // extremely rare fallback
-  toast.error("Session not ready. Please sign in again.");
+if (userError || !userData?.user) {
+  toast.error("Authentication error. Please sign in again.");
   router.replace("/auth?type=student");
   return;
 }
 
-// ✅ NOW it is safe to navigate
+const provider = userData.user.app_metadata?.provider;
+
+// 🩹 ONLY email+password users need refresh
+if (provider === "email") {
+  console.log("🟠 Email provider detected → refreshing session");
+
+  const { error } = await supabase.auth.refreshSession();
+
+  if (error) {
+    console.error("❌ Session refresh failed", error);
+    toast.error("Please sign in again");
+    router.replace("/auth?type=student");
+    return;
+  }
+}
+
+// ✅ Safe for all users
 router.replace("/student/dashboard");
 
 
