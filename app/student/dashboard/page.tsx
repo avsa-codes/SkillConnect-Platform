@@ -133,7 +133,7 @@ useEffect(() => {
 
 
 
-
+//FInal fix 15 starts here 
 
 useEffect(() => {
   if (!user) return;
@@ -145,20 +145,20 @@ useEffect(() => {
       .from("student_profiles")
       .select("*")
       .eq("user_id", user.id)
-      .maybeSingle();
+      .limit(1)
+      .single();
 
     console.log("🔍 student profile fetch:", { data, error });
 
     if (cancelled) return;
 
-    if (error) {
-      console.error("Profile fetch error:", error);
-      return;
-    }
-
-    if (!data) {
-      // 🔁 retry once auth/session finishes hydrating
-      setTimeout(loadProfile, 300);
+    // 🔑 ALWAYS unblock the dashboard
+    if (error || !data) {
+      console.warn("⚠️ Profile not ready yet, continuing anyway");
+      setStudentProfile({
+        user_id: user.id,
+        full_name: user.fullName ?? "Student",
+      });
       return;
     }
 
@@ -171,6 +171,7 @@ useEffect(() => {
     cancelled = true;
   };
 }, [user]);
+
 
 
 
@@ -315,7 +316,7 @@ setCompletedTasks(tasksCompleted || []);
   //   );
   // }
 
-  if (!studentProfile) {
+if (!studentProfile && loading) {
   return (
     <DashboardLayout allowedRoles={["student"]}>
       <div className="p-10 text-center text-muted-foreground">
@@ -324,6 +325,7 @@ setCompletedTasks(tasksCompleted || []);
     </DashboardLayout>
   );
 }
+
 
 
 
