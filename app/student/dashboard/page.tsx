@@ -159,10 +159,13 @@ useEffect(() => {
         user_id: user.id,
         full_name: user.fullName ?? "Student",
       });
+      //starts here 
+      setLoading(false);
       return;
     }
 
     setStudentProfile(data);
+     setLoading(false); 
   };
 
   loadProfile();
