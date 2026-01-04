@@ -125,17 +125,22 @@ console.log("📦 DashboardLayout render", {
     </div>
   );
 }
-  /* -------- 2️⃣ not logged in -------- */
-  console.log("🚨 Dashboard redirect to /auth", {
-  isLoading,
-  hasUser: !!user,
-  isAdmin,
-});
 
 if (!user && !isAdmin) {
-  router.replace("/auth");
-  return null;
+  return null; // wait for redirect effect
 }
+  /* -------- 2️⃣ not logged in -------- */
+
+
+useEffect(() => {
+  if (isLoading) return;
+
+  if (!user && !isAdmin) {
+    console.log("🚨 Layout redirect → /auth");
+    router.replace("/auth");
+  }
+}, [isLoading, user, isAdmin, router]);
+
 
 
   /* -------- 3️⃣ student onboarding guard -------- *----------------/
