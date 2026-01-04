@@ -117,18 +117,15 @@ console.log("📦 DashboardLayout render", {
   const isAdmin = adminSession === "super_admin";
 
   /* -------- 1️⃣ loading -------- */
- if (isLoading && !forced && !user) {
-  console.log("⛔ Dashboard blocked", {
-    isLoading,
-    forced,
-    hasUser: !!user,
-  });
+ if (isLoading && !forced) {
+  console.log("⏳ Dashboard waiting for auth", { isLoading });
   return (
     <div className="min-h-screen flex items-center justify-center bg-background">
       <div className="text-muted-foreground">Loading session…</div>
     </div>
   );
 }
+
 
 
   /* -------- 2️⃣ not logged in -------- */

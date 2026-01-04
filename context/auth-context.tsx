@@ -222,115 +222,56 @@ useEffect(() => {
 
 // 🔥 FIX 2: Supabase auth session ONLY applies if NOT admin
 useEffect(() => {
-  let mounted = true;
+  let isMounted = true;
+  let initialized = false;
 
   console.log("🔵 Supabase auth effect START");
-  console.log("🔵 Calling supabase.auth.getSession()");
 
-  (async () => {
-    // If admin logged in locally → skip Supabase session entirely
-    const adminSession =
-      typeof window !== "undefined"
-        ? localStorage.getItem("admin_session")
-        : null;
+  const { data: sub } = supabase.auth.onAuthStateChange(
+    async (event, session) => {
+      console.log("🟠 AUTH EVENT", {
+        event,
+        userId: session?.user?.id,
+      });
 
-        console.log("🔵 Admin session inside Supabase effect:", adminSession);
+      if (!isMounted) return;
 
-    // if (adminSession === "super_admin") {
-    //   return; // ❌ Skip Supabase login check
-    // }
-    if (adminSession === "super_admin") {
-      console.log("🔵 Skipping Supabase (admin detected)");
-  if (mounted) 
-    console.log("🔵 Setting isLoading = false (admin path)");
-    setIsLoading(false);
-  return;
-}
+      // Admin override
+      const adminSession =
+        typeof window !== "undefined"
+          ? localStorage.getItem("admin_session")
+          : null;
 
-
-    try {
-        console.log("🔵 Calling supabase.auth.getSession()");
-      const {
-        data: { session },
-        error,
-      } = await supabase.auth.getSession();
-
-      console.log("🔵 getSession result:", {
-  hasSession: !!session,
-  userId: session?.user?.id,
-  error,
-});
-
-if (session?.user) {
-  console.log("🔵 Session user exists → building user", session.user.id);
-        const built = await buildUserFromSupabase(supabase, session.user);
-
-        if (!mounted) return;
-        console.log("🔵 Setting user from Supabase");
-        setUser(built);
-      } else {
-          console.log("🔵 No session user → setting user null");
-        if (!mounted) return;
-        setUser(null);
+      if (adminSession === "super_admin") {
+        if (!initialized) {
+          setIsLoading(false);
+          initialized = true;
+        }
+        return;
       }
-    } catch (err) {
 
-      console.error("Error fetching session on mount:", err);
-    } finally {
-      if (!mounted) return;
-      console.log("🔵 FINALLY → setting isLoading = false");
-      setIsLoading(false);
+      if (session?.user) {
+        const built = await buildUserFromSupabase(supabase, session.user);
+        if (isMounted) setUser(built);
+      } else {
+        if (isMounted) setUser(null);
+      }
+
+      // 🔑 release loading ONLY once, after first auth event
+      if (!initialized) {
+        setIsLoading(false);
+        initialized = true;
+      }
     }
-  })();
-
-  // Subscribe to Supabase auth changes
-const { data: sub } = supabase.auth.onAuthStateChange(async (event, session) => {
-console.log("🟠 onAuthStateChange", {
-  event,
-  hasSession: !!session,
-  path: typeof window !== "undefined" ? window.location.pathname : "server",
-});
-
-
-  
-  // 🚫 Do NOT hijack OAuth callback flow
-  if (typeof window !== "undefined") {
-    const path = window.location.pathname;
-    if (path.startsWith("/auth/callback")) {
-      return;
-    }
-  }
-
-  const adminSession =
-    typeof window !== "undefined"
-      ? localStorage.getItem("admin_session")
-      : null;
-       console.log("🟠 Admin session during auth change:", adminSession);
-
-  if (adminSession === "super_admin"){
-    console.log("🟠 Ignoring auth change (admin)");
-return;
-  } 
-
-  if (session?.user) {
-     console.log("🟠 Auth change → rebuilding user");
-    const built = await buildUserFromSupabase(supabase, session.user);
-    setUser(built);
-    setIsLoading(false);
-  } else {
-     console.log("🟠 Auth change → user null");
-    setUser(null);
-    setIsLoading(false);
-  }
-});
-;
+  );
 
   return () => {
     console.log("🔵 Supabase auth effect CLEANUP");
-    mounted = false;
-    sub.subscription?.unsubscribe?.();
+    isMounted = false;
+    sub.subscription.unsubscribe();
   };
 }, []);
+
 
 
   // LOGIN: email + password
