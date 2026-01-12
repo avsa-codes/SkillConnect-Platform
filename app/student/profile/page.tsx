@@ -522,17 +522,18 @@ if (!profile) {
         </div>
 
         {/* Profile Header Card */}
-        {/* Profile Header (Premium Gradient) */}
-<div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-orange-100 via-rose-100 to-purple-100 p-8 shadow-sm">
 
-  {/* Background Glow */}
-  <div className="absolute inset-0 opacity-40 bg-[radial-gradient(circle_at_center,white,transparent_70%)]" />
+{/* Profile Header Card */}
+<div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-orange-100 via-rose-100 to-purple-100 p-6 md:p-8 shadow-sm">
 
-  <div className="relative flex flex-col md:flex-row items-start md:items-center gap-8">
+  {/* Soft glow */}
+  <div className="absolute inset-0 opacity-40 bg-[radial-gradient(circle_at_top,white,transparent_70%)]" />
+
+  <div className="relative flex flex-col md:flex-row md:items-center gap-6 md:gap-8">
 
     {/* Avatar */}
-    <div className="relative shrink-0">
-      <div className="h-28 w-28 rounded-full overflow-hidden border-4 border-white shadow-md">
+    <div className="relative shrink-0 mx-auto md:mx-0">
+      <div className="h-32 w-32 md:h-28 md:w-28 rounded-full overflow-hidden border-4 border-white shadow-lg">
         <Avatar className="h-full w-full">
           <AvatarImage
             src={
@@ -541,14 +542,14 @@ if (!profile) {
                 : profile?.avatar_url || undefined
             }
           />
-          <AvatarFallback className="bg-primary text-primary-foreground text-2xl">
+          <AvatarFallback className="bg-primary text-primary-foreground text-3xl">
             {formData.fullName.charAt(0)}
           </AvatarFallback>
         </Avatar>
       </div>
 
-      {/* Camera button */}
-      <label className="absolute bottom-1 right-1 h-9 w-9 bg-primary text-primary-foreground rounded-full flex items-center justify-center cursor-pointer hover:bg-primary/90 shadow-md border border-white">
+      {/* Change photo button */}
+      <label className="absolute -bottom-1 -right-1 h-9 w-9 bg-white text-primary rounded-full flex items-center justify-center cursor-pointer hover:bg-white/90 shadow-md border">
         <Camera className="h-4 w-4" />
         <input
           type="file"
@@ -559,42 +560,67 @@ if (!profile) {
       </label>
     </div>
 
-    {/* Name & Stats */}
-    <div className="flex-1">
-     <div className="flex items-center gap-3 flex-wrap">
-  <h2 className="text-2xl font-bold tracking-tight flex items-center gap-2">
-    {formData.fullName}
+    {/* Info */}
+    <div className="flex-1 text-center md:text-left">
 
-    {profile?.is_verified && (
-      <span className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold rounded-full bg-blue-600 text-white shadow">
-        <CheckCircle className="h-4 w-4" />
-        Verified
-      </span>
-    )}
-  </h2>
+      {/* Name row */}
+      <div className="flex flex-col md:flex-row md:items-center gap-2 md:gap-3">
 
-  {/* SkillConnect ID */}
-  <span className="px-3 py-1 bg-white shadow-sm text-primary text-xs font-semibold rounded-full border">
-    {user?.skillConnectId}
-  </span>
-</div>
+        <div className="flex items-center justify-center md:justify-start gap-2 flex-wrap">
+          <h2 className="text-2xl md:text-3xl font-bold tracking-tight">
+            {formData.fullName}
+          </h2>
 
+          {profile?.is_verified && (
+            <span className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold rounded-full bg-blue-600 text-white shadow">
+              <CheckCircle className="h-4 w-4" />
+              Verified
+            </span>
+          )}
+        </div>
 
-      <p className="text-muted-foreground mt-1">{formData.email}</p>
+        {/* SkillConnect ID */}
+        <span className="mx-auto md:mx-0 w-fit px-3 py-1 bg-white/80 backdrop-blur text-primary text-xs font-semibold rounded-full border shadow-sm">
+          {user?.skillConnectId}
+        </span>
+      </div>
 
-      {/* Stats Row */}
-      <div className="flex items-center gap-6 mt-4">
+      {/* Email */}
+      <p className="text-muted-foreground mt-1 text-sm md:text-base">
+        {formData.email}
+      </p>
+
+      {/* Stats */}
+      <div className="mt-5 grid grid-cols-2 md:grid-cols-3 gap-3 max-w-md mx-auto md:mx-0">
 
         {/* Rating */}
-        <div className="flex items-center gap-1 bg-white/80 px-3 py-1 rounded-full shadow-sm border">
-          <Star className="h-4 w-4 text-yellow-500 fill-yellow-500" />
-          <span className="font-medium">{profile?.rating ?? 0}</span>
+        <div className="bg-white/80 backdrop-blur rounded-2xl border shadow-sm p-3 text-center">
+          <div className="flex items-center justify-center gap-1 text-yellow-500">
+            <Star className="h-4 w-4 fill-yellow-500" />
+            <span className="font-semibold text-foreground">
+              {profile?.rating ?? 0}
+            </span>
+          </div>
+          <div className="text-xs text-muted-foreground mt-1">Rating</div>
         </div>
 
         {/* Tasks */}
-        <div className="flex items-center gap-1 bg-white/80 px-3 py-1 rounded-full shadow-sm border text-sm text-muted-foreground">
-          <Award className="h-4 w-4" />
-          <span>{profile?.tasks_completed ?? 0} tasks completed</span>
+        <div className="bg-white/80 backdrop-blur rounded-2xl border shadow-sm p-3 text-center">
+          <div className="flex items-center justify-center gap-1 text-foreground">
+            <Award className="h-4 w-4" />
+            <span className="font-semibold">
+              {profile?.tasks_completed ?? 0}
+            </span>
+          </div>
+          <div className="text-xs text-muted-foreground mt-1">Tasks done</div>
+        </div>
+
+        {/* Profile Strength */}
+        <div className="hidden md:block bg-white/80 backdrop-blur rounded-2xl border shadow-sm p-3 text-center">
+          <div className="font-semibold text-foreground">
+            {profile?.profile_strength ?? 0}%
+          </div>
+          <div className="text-xs text-muted-foreground mt-1">Profile strength</div>
         </div>
 
       </div>
@@ -602,6 +628,7 @@ if (!profile) {
 
   </div>
 </div>
+
 
 
         {/* Personal Details */}
