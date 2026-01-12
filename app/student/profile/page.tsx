@@ -17,6 +17,8 @@ import { mockStudents } from "@/lib/mock-data"
 import { useMemo } from "react";
 
 import { Loader2, Camera, Star, Award, Plus, Trash2 } from "lucide-react"
+import { CheckCircle } from "lucide-react";
+
 
 interface Experience {
   id: string;
@@ -559,16 +561,24 @@ if (!profile) {
 
     {/* Name & Stats */}
     <div className="flex-1">
-      <div className="flex items-center gap-4 flex-wrap">
-        <h2 className="text-2xl font-bold tracking-tight">
-          {formData.fullName}
-        </h2>
+     <div className="flex items-center gap-3 flex-wrap">
+  <h2 className="text-2xl font-bold tracking-tight flex items-center gap-2">
+    {formData.fullName}
 
-        {/* SkillConnect ID */}
-        <span className="px-3 py-1 bg-white shadow-sm text-primary text-xs font-semibold rounded-full border">
-          {user?.skillConnectId}
-        </span>
-      </div>
+    {profile?.is_verified && (
+      <span className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold rounded-full bg-blue-600 text-white shadow">
+        <CheckCircle className="h-4 w-4" />
+        Verified
+      </span>
+    )}
+  </h2>
+
+  {/* SkillConnect ID */}
+  <span className="px-3 py-1 bg-white shadow-sm text-primary text-xs font-semibold rounded-full border">
+    {user?.skillConnectId}
+  </span>
+</div>
+
 
       <p className="text-muted-foreground mt-1">{formData.email}</p>
 

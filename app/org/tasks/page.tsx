@@ -15,6 +15,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Textarea } from "@/components/ui/textarea";
 import { createSupabaseBrowserClient } from "@/lib/supabase-browser";
 import { Plus, Search, Calendar, Clock, MapPin, Users, Eye } from "lucide-react";
+import { CheckCircle } from "lucide-react";
 
 export default function OrgTasksPage() {
   const supabase = createSupabaseBrowserClient();
@@ -828,9 +829,20 @@ export default function OrgTasksPage() {
                       {studentProfile.full_name?.charAt(0) ?? "S"}
                     </div>
                     <div>
-                      <p className="font-medium text-foreground">{studentProfile.full_name}</p>
-                      <p className="text-sm text-muted-foreground">{studentProfile.college}</p>
-                    </div>
+  <div className="flex items-center gap-2">
+    <p className="font-medium text-foreground">{studentProfile.full_name}</p>
+
+    {studentProfile.is_verified && (
+      <span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-semibold rounded-full bg-blue-600 text-white">
+        <CheckCircle className="h-3.5 w-3.5" />
+        Verified
+      </span>
+    )}
+  </div>
+
+  <p className="text-sm text-muted-foreground">{studentProfile.college}</p>
+</div>
+
                   </div>
 
                   <div className="mt-4">

@@ -114,6 +114,54 @@ export default function AdminStudentsPage() {
     return matchesSearch && matchesSkill && matchesAvailability;
   });
 
+
+
+//Verification feature
+async function toggleVerification(student: any) {
+  console.log("STUDENT OBJECT:", student);
+
+  if (!student?.user_id) {
+    alert("Student ID missing");
+    return;
+  }
+
+  const payload = {
+    studentId: student.user_id,       // ✅ THIS IS CORRECT
+    is_verified: !student.is_verified,
+  };
+
+  console.log("Sending payload:", payload);
+
+  const res = await fetch("/api/admin/verify-student", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+
+  const text = await res.text();
+  console.log("API response:", text);
+
+  if (!res.ok) {
+    alert(text);
+    return;
+  }
+
+  // Update local UI
+  setSelectedStudent((prev: any) =>
+    prev ? { ...prev, is_verified: !prev.is_verified } : prev
+  );
+
+  // Refresh table
+  const { data } = await supabase
+    .from("student_profiles")
+    .select("*")
+    .order("created_at", { ascending: false });
+
+  setStudents(data || []);
+}
+
+
+
   // -------------------------------------------
   // 🔥 RENDER PAGE
   // -------------------------------------------
@@ -341,7 +389,15 @@ export default function AdminStudentsPage() {
             )}
 
             <div>
-              <h3 className="text-xl font-semibold">{selectedStudent.full_name}</h3>
+              <h3 className="text-xl font-semibold flex items-center gap-2">
+  {selectedStudent.full_name}
+  {selectedStudent.is_verified && (
+    <span className="px-2 py-1 text-xs rounded-full bg-blue-600 text-white">
+      ✔ Verified
+    </span>
+  )}
+</h3>
+
               <p className="text-muted-foreground">{selectedStudent.email}</p>
               {selectedStudent.phone && (
                 <p className="text-sm text-muted-foreground">{selectedStudent.phone}</p>
@@ -535,18 +591,32 @@ export default function AdminStudentsPage() {
 
         </div>
 
-        <DialogFooter>
-          <Button variant="outline" onClick={() => setSelectedStudent(null)}>
-            Close
-          </Button>
-          <Button
-            variant="outline"
-            onClick={() => setShowEditModal(true)}
-          >
-            <Edit className="mr-2 h-4 w-4" />
-            Edit
-          </Button>
-        </DialogFooter>
+        <DialogFooter className="flex justify-between">
+
+  {/* LEFT SIDE: VERIFY BUTTON */}
+  <Button
+    variant={selectedStudent.is_verified ? "destructive" : "default"}
+    onClick={() => toggleVerification(selectedStudent)}
+  >
+    {selectedStudent.is_verified ? "Unverify Student" : "Verify Student"}
+  </Button>
+
+  {/* RIGHT SIDE: EXISTING BUTTONS */}
+  <div className="flex gap-2">
+    <Button variant="outline" onClick={() => setSelectedStudent(null)}>
+      Close
+    </Button>
+    <Button
+      variant="outline"
+      onClick={() => setShowEditModal(true)}
+    >
+      <Edit className="mr-2 h-4 w-4" />
+      Edit
+    </Button>
+  </div>
+
+</DialogFooter>
+
       </>
     )}
   </DialogContent>
