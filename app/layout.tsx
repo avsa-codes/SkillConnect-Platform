@@ -2,11 +2,10 @@ import type React from "react"
 import type { Metadata, Viewport } from "next"
 import { Geist, Geist_Mono } from "next/font/google"
 import { Analytics } from "@vercel/analytics/next"
+import { GoogleAnalytics } from "@next/third-parties/google"
 import { AuthProvider } from "@/context/auth-context"
 import { Toaster } from "@/components/ui/sonner"
 import "./globals.css"
-
-
 
 const _geist = Geist({ subsets: ["latin"] })
 const _geistMono = Geist_Mono({ subsets: ["latin"] })
@@ -50,11 +49,15 @@ export default function RootLayout({
     <html lang="en">
       <body className="font-sans antialiased">
         <AuthProvider>
-          
           {children}
           <Toaster />
         </AuthProvider>
+
+        {/* Vercel Analytics */}
         <Analytics />
+
+        {/* Google Analytics */}
+        <GoogleAnalytics gaId="G-K8BYFZNB9B" />
       </body>
     </html>
   )
