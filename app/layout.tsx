@@ -74,6 +74,22 @@ export default function RootLayout({
 
         {/* Google Analytics */}
         <GoogleAnalytics gaId="G-K8BYFZNB9B" />
+
+{/*Organization Scema code*/ }
+<script
+  type="application/ld+json"
+  dangerouslySetInnerHTML={{
+    __html: JSON.stringify({
+      "@context": "https://schema.org",
+      "@type": "Organization",
+      name: "InstaTask SkillConnect",
+      url: "https://instatask.in",
+      logo: "https://instatask.in/logo.png",
+    }),
+  }}
+/>
+
+
       </body>
     </html>
   )
