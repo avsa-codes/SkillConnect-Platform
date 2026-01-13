@@ -14,6 +14,10 @@ export const metadata: Metadata = {
   title: "InstaTask SkillConnect — Work on real projects. Get paid.",
   description:
     "Work on real projects, get paid, and build your career with InstaTask SkillConnect. A curated marketplace connecting students with companies.",
+    verification: {
+  google: "14PvWZuhWUcBsTIbAvpx5RskVQo9gxSXMPPmGEUa7BE",
+},
+
   icons: {
     icon: [
       { url: "/favicon.ico" },
@@ -47,6 +51,7 @@ export const metadata: Metadata = {
     locale: "en_IN",
     type: "website",
   },
+  
 }
 
 
@@ -88,8 +93,6 @@ export default function RootLayout({
     }),
   }}
 />
-
-
       </body>
     </html>
   )
