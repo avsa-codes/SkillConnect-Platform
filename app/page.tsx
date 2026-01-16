@@ -31,15 +31,14 @@ export default function HomePage() {
                   Work on real projects. Get paid. Build your career.
                 </h1>
                 <p className="mt-6 text-lg md:text-xl text-muted-foreground leading-relaxed max-w-xl">
-                  Join a curated network of students completing short-term, skill-based projects for trusted companies.
-                  Earn income, gain experience, and build a portfolio that opens doors.
+                  Join a network of students doing real paid work — from events and operations to sales, content, and more. Earn money, gain experience, and build proof of work that actually matters.
                 </p>
                 <div className="mt-8 flex flex-col sm:flex-row gap-4">
                   <Button asChild size="lg" className="rounded-full text-base px-8">
-                    <Link href="/auth?type=student&mode=register">Register as a Student</Link>
+                    <Link href="/auth?type=student&mode=register">{/*Register as a Student*/}Find Paid Work</Link>
                   </Button>
                   <Button asChild size="lg" variant="outline" className="rounded-full text-base px-8 bg-transparent">
-                    <Link href="/auth?type=organization&mode=register">Register as Organization</Link>
+                    <Link href="/auth?type=organization&mode=register">{/*Register as Organization*/}Post a Task</Link>
                   </Button>
                 </div>
               </div>
@@ -103,11 +102,10 @@ export default function HomePage() {
                 For Students
               </span>
               <h2 className="text-3xl md:text-4xl font-bold text-balance">
-                Kickstart your career with real work experience
+                {/* Kickstart your career with real work experience */}Get paid for real work while you study
               </h2>
               <p className="mt-4 text-lg text-muted-foreground max-w-2xl mx-auto">
-                Get matched with short-term projects that fit your skills and schedule. Build your portfolio while
-                earning.
+                From college events to company projects — do real work, earn real money, and build experience that actually helps.
               </p>
             </div>
 
@@ -129,9 +127,9 @@ export default function HomePage() {
                   <div className="h-12 w-12 rounded-2xl bg-primary/10 flex items-center justify-center mb-4">
                     <Wallet className="h-6 w-6 text-primary" />
                   </div>
-                  <h3 className="text-lg font-semibold mb-2">Earn while learning</h3>
+                  <h3 className="text-lg font-semibold mb-2">Get paid, on time</h3>
                   <p className="text-muted-foreground">
-                    Get paid for your work. Transparent payments with fast weekly or bi-weekly payouts.
+                    Get paid for your work. Transparent payments with fast weekly or monthly payouts.
                   </p>
                 </CardContent>
               </Card>
@@ -192,7 +190,7 @@ export default function HomePage() {
                   <div className="h-12 w-12 rounded-2xl bg-primary/10 flex items-center justify-center mb-4">
                     <Shield className="h-6 w-6 text-primary" />
                   </div>
-                  <h3 className="text-lg font-semibold mb-2">Managed by InstaTask Admin</h3>
+                  <h3 className="text-lg font-semibold mb-2">Managed by InstaTask</h3>
                   <p className="text-muted-foreground">
                     Our team handles screening, matching, and student management so you can focus on your work.
                   </p>
@@ -237,12 +235,12 @@ export default function HomePage() {
               {[
                 {
                   step: "01",
-                  title: "Post a Task",
+                  title: "Post Work",
                   desc: "Organizations describe their project needs and requirements.",
                 },
-                { step: "02", title: "Admin Shortlists", desc: "Our team matches and shortlists the best candidates." },
-                { step: "03", title: "Student Accepts", desc: "Selected students receive and accept offers." },
-                { step: "04", title: "Work & Get Paid", desc: "Complete the work, earn money, get certificates." },
+                { step: "02", title: "We find the right students", desc: "Our team matches and shortlists the best candidates." },
+                { step: "03", title: "Student accepts and starts", desc: "Selected students receive and accept offers." },
+                { step: "04", title: "Work gets done, student gets paid", desc: "Complete the work, earn money, get certificates." },
               ].map((item, i) => (
                 <div key={i} className="text-center">
                   <div className="h-16 w-16 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xl font-bold mx-auto mb-4">
