@@ -11,36 +11,36 @@ const _geist = Geist({ subsets: ["latin"] })
 const _geistMono = Geist_Mono({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
-  title: "InstaTask SkillConnect — Work on real projects. Get paid.",
+  title: {
+    default: "InstaTask SkillConnect",
+    template: "%s | InstaTask SkillConnect",
+  },
   description:
     "Work on real projects, get paid, and build your career with InstaTask SkillConnect. A curated marketplace connecting students with companies.",
-    verification: {
-  google: "14PvWZuhWUcBsTIbAvpx5RskVQo9gxSXMPPmGEUa7BE",
-},
+
+  applicationName: "InstaTask",
+
+  metadataBase: new URL("https://instatask.in"),
+
+  verification: {
+    google: "14PvWZuhWUcBsTIbAvpx5RskVQo9gxSXMPPmGEUa7BE",
+  },
 
   icons: {
     icon: [
       { url: "/favicon.ico" },
-      {
-        url: "/icon-light-32x32.png",
-        media: "(prefers-color-scheme: light)",
-      },
-      {
-        url: "/icon-dark-32x32.png",
-        media: "(prefers-color-scheme: dark)",
-      },
-      {
-        url: "/icon.svg",
-        type: "image/svg+xml",
-      },
+      { url: "/icon-light-32x32.png", media: "(prefers-color-scheme: light)" },
+      { url: "/icon-dark-32x32.png", media: "(prefers-color-scheme: dark)" },
+      { url: "/icon.svg", type: "image/svg+xml" },
     ],
     apple: "/apple-icon.png",
   },
+
   openGraph: {
     title: "InstaTask SkillConnect",
     description: "Work on real projects. Get paid. Build your career.",
     url: "https://instatask.in",
-    siteName: "InstaTask SkillConnect",
+    siteName: "InstaTask", // 🔥 IMPORTANT: BRAND NAME, not product
     images: [
       {
         url: "https://instatask.in/og-image.png",
@@ -51,8 +51,8 @@ export const metadata: Metadata = {
     locale: "en_IN",
     type: "website",
   },
-  
-}
+};
+
 
 
 export const viewport: Viewport = {
@@ -80,19 +80,34 @@ export default function RootLayout({
         {/* Google Analytics */}
         <GoogleAnalytics gaId="G-K8BYFZNB9B" />
 
-{/*Organization Scema code*/ }
+{/* Organization Schema (Brand) */}
 <script
   type="application/ld+json"
   dangerouslySetInnerHTML={{
     __html: JSON.stringify({
       "@context": "https://schema.org",
       "@type": "Organization",
-      name: "InstaTask SkillConnect",
+      name: "InstaTask",
       url: "https://instatask.in",
       logo: "https://instatask.in/logo.png",
     }),
   }}
 />
+
+{/* Website Schema (Controls Google Site Name) */}
+<script
+  type="application/ld+json"
+  dangerouslySetInnerHTML={{
+    __html: JSON.stringify({
+      "@context": "https://schema.org",
+      "@type": "WebSite",
+      name: "InstaTask",
+      alternateName: "InstaTask SkillConnect",
+      url: "https://instatask.in",
+    }),
+  }}
+/>
+
       </body>
     </html>
   )
