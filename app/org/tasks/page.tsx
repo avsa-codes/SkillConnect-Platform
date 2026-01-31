@@ -53,8 +53,17 @@ export default function OrgTasksPage() {
 
   const [showCompletionModal, setShowCompletionModal] = useState(false);
   const [completionTask, setCompletionTask] = useState<any | null>(null);
-  const [completionFeedback, setCompletionFeedback] = useState("");
-  const [completionRating, setCompletionRating] = useState<number | null>(null);
+const [completionOutcome, setCompletionOutcome] = useState<"completed" | "no_show" | "left_midway">("completed");
+const [completionTimeliness, setCompletionTimeliness] = useState<"on_time" | "late">("on_time");
+const [lateByMinutes, setLateByMinutes] = useState<number | null>(null);
+
+const [workQuality, setWorkQuality] = useState<number>(3);
+const [professionalism, setProfessionalism] = useState<number>(3);
+const [wouldRehire, setWouldRehire] = useState<"yes" | "no">("yes");
+
+const [completionFeedback, setCompletionFeedback] = useState("");
+
+
   const [completing, setCompleting] = useState(false);
 
   // load current user -> organization -> tasks
@@ -94,6 +103,8 @@ export default function OrgTasksPage() {
               .select("*")
               .eq("org_id", orgId)
               .order("created_at", { ascending: false });
+
+              
 
             if (tasksErr) {
               console.error("Error loading org tasks:", tasksErr);
@@ -263,60 +274,182 @@ export default function OrgTasksPage() {
     setStudentProfile(data);
   }
 
-  function openCompletionModal(task: any) {
-    setCompletionTask(task);
-    setCompletionFeedback("");
-    setCompletionRating(null);
-    setShowCompletionModal(true);
-  }
+function openCompletionModal(task: any) {
+  setCompletionTask(task);
 
-  async function submitCompletion() {
-    if (!completionTask) return;
-    if (completionRating == null) {
-      toast.error("Please provide a rating");
+  setCompletionOutcome("completed");
+  setCompletionTimeliness("on_time");
+  setLateByMinutes(null);
+
+  setWorkQuality(3);
+  setProfessionalism(3);
+  setWouldRehire("yes");
+
+  setCompletionFeedback("");
+  setShowCompletionModal(true);
+}
+
+
+function mapOutcomeForDB(outcome: string, timeliness: string) {
+  if (outcome === "no_show") return "dropped";
+  if (outcome === "left_midway") return "replaced";
+
+  // outcome === "completed"
+  if (timeliness === "late") return "late";
+  return "on_time";
+}
+
+
+
+async function submitCompletion() {
+  if (!completionTask) return;
+if (!completionOutcome || !completionTimeliness || !workQuality || !professionalism || !wouldRehire) {
+  toast.error("Please fill all required fields");
+  return;
+}
+
+
+  setCompleting(true);
+
+  try {
+    const { data: userRes } = await supabase.auth.getUser();
+    const orgUser = userRes?.user;
+    if (!orgUser) throw new Error("Not authenticated");
+
+    // 1. Find assigned student
+    const assignedStudent =
+      Array.isArray(completionTask.assigned_students) && completionTask.assigned_students.length > 0
+        ? completionTask.assigned_students[0]
+        : null;
+
+    if (!assignedStudent) {
+      toast.error("No student assigned");
       return;
     }
 
-    setCompleting(true);
-    try {
-      const updates: any = {
-        org_feedback: completionFeedback || null,
-        org_rating: completionRating,
+    // 2. Find task_assignment row
+
+console.log("LOOKING FOR ASSIGNMENT WITH:", {
+  task_id: completionTask.id,
+  student_id: assignedStudent,
+});
+
+const { data: assignment, error: assignErr } = await supabase
+  .from("task_assignments")
+  .select("*")
+  .eq("task_id", completionTask.id)
+  .eq("student_id", assignedStudent)
+  .maybeSingle();
+
+console.log("FOUND ASSIGNMENT:", assignment, "ERROR:", assignErr);
+
+if (assignErr || !assignment) {
+  toast.error("Task assignment not found");
+  return;
+}
+
+
+    // 3. Insert feedback
+const { data: fbData, error: fbErr } = await supabase
+  .from("task_feedback")
+  .insert({
+    task_assignment_id: assignment.id,
+    task_id: completionTask.id,
+    student_id: assignedStudent,
+    org_id: orgUser.id,
+
+    outcome: mapOutcomeForDB(completionOutcome, completionTimeliness),
+    timeliness: completionTimeliness,
+    late_minutes: completionTimeliness === "late" ? lateByMinutes : null,
+
+    quality_rating: workQuality,
+    reliability_rating: professionalism, // TEMP reuse
+    would_rehire: wouldRehire === "yes",
+
+    comment: completionFeedback || null,
+  })
+  .select()
+  .single();
+
+console.log("✅ FEEDBACK INSERT RESULT:", fbData);
+console.log("❌ FEEDBACK INSERT ERROR:", fbErr);
+
+if (fbErr) {
+  toast.error("Failed to save feedback");
+  return;
+}
+
+// 1. Count how many completed tasks this student has (new system only)
+const { count } = await supabase
+  .from("task_feedback")
+  .select("*", { count: "exact", head: true })
+  .eq("student_id", assignedStudent);
+
+// 2. Update student profile stats
+await supabase
+  .from("student_profiles")
+  .update({
+    total_tasks_completed: count ?? 0,
+    tasks_completed: count ?? 0, // if you still use this column
+    updated_at: new Date().toISOString(),
+  })
+  .eq("user_id", assignedStudent);
+
+
+// 🔥 Recalculate SkillConnect Score
+const res = await fetch("/api/score/recalculate", {
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify({
+    student_id: assignedStudent,
+  }),
+});
+
+const scoreResult = await res.json();
+console.log("🧮 Score recalculation result:", scoreResult);
+
+
+
+
+    // 4. Mark assignment completed
+    await supabase
+      .from("task_assignments")
+      .update({
         status: "completed",
         completed_at: new Date().toISOString(),
-      };
+      })
+      .eq("id", assignment.id);
 
-      const { data, error } = await supabase
-        .from("tasks")
-        .update(updates)
-        .eq("id", completionTask.id)
-        .select()
-        .single();
+    // 5. Mark task completed (keep for UI compatibility)
+    const { data: updatedTask } = await supabase
+      .from("tasks")
+      .update({
+        status: "completed",
+        completed_at: new Date().toISOString(),
+      })
+      .eq("id", completionTask.id)
+      .select()
+      .single();
 
-      if (error) {
-        console.error("Error completing task:", error);
-        toast.error("Failed to mark task completed");
-        return;
-      }
 
-      // Normalize result
-      const normalized = {
-        ...data,
-        skills: Array.isArray(data.skills) ? data.skills : (data.skills ? data.skills.split(",") : []),
-        assigned_students: Array.isArray(data.assigned_students) ? data.assigned_students : (data.assigned_students ? [data.assigned_students] : []),
-      };
 
-      setTasks((prev) => prev.map((t) => (t.id === normalized.id ? normalized : t)));
-      toast.success("Task marked as completed");
-      setShowCompletionModal(false);
-      setCompletionTask(null);
-    } catch (err) {
-      console.error("Unexpected completion error:", err);
-      toast.error("Unexpected error");
-    } finally {
-      setCompleting(false);
-    }
+    // 8. Update UI
+    setTasks((prev) =>
+      prev.map((t) => (t.id === completionTask.id ? { ...t, status: "completed" } : t))
+    );
+
+    toast.success("Task completed & feedback saved");
+    setShowCompletionModal(false);
+    setCompletionTask(null);
+
+  } catch (err) {
+    console.error("Completion error:", err);
+    toast.error("Something went wrong");
+  } finally {
+    setCompleting(false);
   }
+}
+
 
   function mapTaskStatus(status: string) {
     switch (status) {
@@ -887,7 +1020,7 @@ export default function OrgTasksPage() {
 
         {/* Completion Modal */}
         <Dialog open={showCompletionModal} onOpenChange={() => setShowCompletionModal(false)}>
-          <DialogContent className="max-w-lg">
+          <DialogContent className="max-w-lg max-h-[80vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Mark Task as Completed</DialogTitle>
               <DialogDescription>
@@ -895,36 +1028,108 @@ export default function OrgTasksPage() {
               </DialogDescription>
             </DialogHeader>
 
-            <div className="space-y-4 mt-2">
-              {completionTask && (
-                <>
-                  <div>
-                    <p className="font-medium">{completionTask.title}</p>
-                    <p className="text-sm text-muted-foreground">Students filled: {completionTask.positions_filled ?? 0}</p>
-                  </div>
+         
 
-                  <div>
-                    <label className="block text-sm font-medium text-muted-foreground mb-1">Rating (1-5)</label>
-                    <div className="flex items-center gap-2">
-                      {[1,2,3,4,5].map((n) => (
-                        <button
-                          key={n}
-                          onClick={() => setCompletionRating(n)}
-                          className={`px-3 py-1 rounded-full border ${completionRating === n ? "bg-amber-100 border-amber-300" : "bg-transparent border-muted"}`}
-                        >
-                          {n}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
 
-                  <div>
-                    <label className="block text-sm font-medium text-muted-foreground mb-1">Feedback</label>
-                    <Textarea value={completionFeedback} onChange={(e) => setCompletionFeedback(e.target.value)} />
-                  </div>
-                </>
-              )}
-            </div>
+<div className="space-y-5">
+
+  {/* 1. Outcome */}
+  <div>
+    <label className="block font-medium mb-1">Task Outcome</label>
+    <Select value={completionOutcome} onValueChange={(v:any) => setCompletionOutcome(v)}>
+      <SelectTrigger><SelectValue /></SelectTrigger>
+      <SelectContent>
+        <SelectItem value="completed">Completed</SelectItem>
+        <SelectItem value="no_show">No-show</SelectItem>
+        <SelectItem value="left_midway">Left in between</SelectItem>
+      </SelectContent>
+    </Select>
+  </div>
+
+  {/* 2. Timeliness */}
+  <div>
+    <label className="block font-medium mb-1">Timeliness</label>
+    <Select value={completionTimeliness} onValueChange={(v:any) => setCompletionTimeliness(v)}>
+      <SelectTrigger><SelectValue /></SelectTrigger>
+      <SelectContent>
+        <SelectItem value="on_time">On time</SelectItem>
+        <SelectItem value="late">Late</SelectItem>
+      </SelectContent>
+    </Select>
+
+    {completionTimeliness === "late" && (
+      <Input
+        type="number"
+        className="mt-2"
+        placeholder="Minutes late"
+        value={lateByMinutes ?? ""}
+        onChange={(e) => setLateByMinutes(parseInt(e.target.value))}
+      />
+    )}
+  </div>
+
+  {/* 3. Work Quality */}
+  <div>
+    <label className="block font-medium mb-1">Work Quality</label>
+    <div className="flex gap-2">
+      {[1,2,3,4,5].map(n => (
+        <button
+          key={n}
+          onClick={() => setWorkQuality(n)}
+          className={`px-3 py-1 border rounded ${
+            workQuality === n ? "bg-orange-100 border-orange-400" : ""
+          }`}
+        >
+          {n}
+        </button>
+      ))}
+    </div>
+  </div>
+
+  {/* 4. Professionalism */}
+  <div>
+    <label className="block font-medium mb-1">Professionalism</label>
+    <div className="flex gap-2">
+      {[1,2,3,4,5].map(n => (
+        <button
+          key={n}
+          onClick={() => setProfessionalism(n)}
+          className={`px-3 py-1 border rounded ${
+            professionalism === n ? "bg-orange-100 border-orange-400" : ""
+          }`}
+        >
+          {n}
+        </button>
+      ))}
+    </div>
+  </div>
+
+  {/* 5. Would Rehire */}
+  <div>
+    <label className="block font-medium mb-1">Would you hire this person again?</label>
+    <Select value={wouldRehire} onValueChange={(v:any) => setWouldRehire(v)}>
+      <SelectTrigger><SelectValue /></SelectTrigger>
+      <SelectContent>
+        <SelectItem value="yes">Yes</SelectItem>
+        <SelectItem value="no">No</SelectItem>
+      </SelectContent>
+    </Select>
+  </div>
+
+  {/* 6. Comment */}
+  <div>
+    <label className="block font-medium mb-1">Additional comments (optional)</label>
+    <Textarea
+      value={completionFeedback}
+      onChange={(e) => setCompletionFeedback(e.target.value)}
+      placeholder="Write any additional feedback..."
+    />
+  </div>
+
+</div>
+
+
+
 
             <DialogFooter>
               <Button variant="outline" onClick={() => setShowCompletionModal(false)}>Cancel</Button>

@@ -45,17 +45,7 @@ export default function StudentProfilePage() {
   console.log("👤 Profile page auth", { user, isLoading });
 
 
-if (isLoading) {
-  return (
-    <div className="min-h-screen flex items-center justify-center">
-      <div className="text-muted-foreground">Loading profile…</div>
-    </div>
-  );
-}
 
-if (!user) {
-  return null; // layout will redirect
-}
 
 
   // const studentProfile = mockStudents[0]
@@ -216,6 +206,8 @@ useEffect(() => {
     }
 
     setProfile(data);
+    console.log("🧮 SkillConnect Score from DB:", data.skillconnect_score);
+
 
     setFormData(prev => ({
       ...prev,
@@ -493,6 +485,18 @@ const [viewCert, setViewCert] = useState<string | null>(null);
   </div>
 )}
 
+if (isLoading) {
+  return (
+    <div className="min-h-screen flex items-center justify-center">
+      <div className="text-muted-foreground">Loading profile…</div>
+    </div>
+  );
+}
+
+if (!user) {
+  return null; // layout will redirect
+}
+
 if (!profile) {
   return (
     <DashboardLayout allowedRoles={["student"]}>
@@ -594,15 +598,31 @@ if (!profile) {
       <div className="mt-5 grid grid-cols-2 md:grid-cols-3 gap-3 max-w-md mx-auto md:mx-0">
 
         {/* Rating */}
-        <div className="bg-white/80 backdrop-blur rounded-2xl border shadow-sm p-3 text-center">
-          <div className="flex items-center justify-center gap-1 text-yellow-500">
-            <Star className="h-4 w-4 fill-yellow-500" />
-            <span className="font-semibold text-foreground">
-              {profile?.rating ?? 0}
-            </span>
-          </div>
-          <div className="text-xs text-muted-foreground mt-1">Rating</div>
-        </div>
+       {/* SkillConnect Score */}
+<div className="bg-white/90 backdrop-blur rounded-2xl border shadow-sm p-3 text-center">
+  <div className="flex items-center justify-center gap-2">
+    <div className="text-2xl font-bold text-gray-900">
+      {profile?.skillconnect_score ?? 0}
+    </div>
+    <div className="text-sm text-muted-foreground">/ 100</div>
+  </div>
+
+  <div className="text-xs font-medium mt-1 text-muted-foreground">
+    SkillConnect Score
+  </div>
+
+  {/* Optional: small quality label */}
+  <div className="mt-1 text-xs">
+    {(() => {
+      const s = profile?.skillconnect_score ?? 0;
+      if (s >= 80) return <span className="text-green-600 font-semibold">Excellent</span>;
+      if (s >= 60) return <span className="text-blue-600 font-semibold">Good</span>;
+      if (s >= 40) return <span className="text-yellow-600 font-semibold">Average</span>;
+      return <span className="text-red-600 font-semibold">Needs Work</span>;
+    })()}
+  </div>
+</div>
+
 
         {/* Tasks */}
         <div className="bg-white/80 backdrop-blur rounded-2xl border shadow-sm p-3 text-center">

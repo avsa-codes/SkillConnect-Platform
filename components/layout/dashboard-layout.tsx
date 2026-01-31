@@ -32,6 +32,7 @@ import {
   Shield,
   MessageSquare,
   Bell,
+  FileText,
 } from "lucide-react";
 
 /* ------------------ NAV CONFIG ------------------ */
@@ -44,6 +45,7 @@ interface NavItem {
 const studentNavItems: NavItem[] = [
   { href: "/student/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/student/profile", label: "Profile", icon: User },
+  { href: "/student/work-ledger", label: "Work-Ledger", icon: FileText },
   { href: "/student/settings", label: "Settings", icon: Settings },
 ];
 const orgNavItems: NavItem[] = [

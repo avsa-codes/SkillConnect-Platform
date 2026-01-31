@@ -64,38 +64,72 @@ export async function POST(req: Request) {
     }
 
     // 3. If accepted, attach student to the task (assigned_students array)
-    if (new_status === "accepted" && offer.task_id && offer.student_id) {
-      const { data: task, error: taskErr } = await supabase
+if (new_status === "accepted" && offer.task_id && offer.student_id) {
+  // 3a. Load task (we need org_id too)
+  const { data: task, error: taskErr } = await supabase
+    .from("tasks")
+    .select("assigned_students, org_id")
+    .eq("id", offer.task_id)
+    .maybeSingle();
+
+  if (!taskErr && task) {
+    const current =
+      (task.assigned_students as string[] | null) ?? [];
+
+    // only add if not already present
+    if (!current.includes(offer.student_id)) {
+      const updated = [...current, offer.student_id];
+
+      // 3b. Update task
+      const { error: updateTaskErr } = await supabase
         .from("tasks")
-        .select("assigned_students")
-        .eq("id", offer.task_id)
-        .maybeSingle();
+        .update({
+          assigned_students: updated,
+          status: "active",
+        })
+        .eq("id", offer.task_id);
 
-      if (!taskErr && task) {
-        const current =
-          (task.assigned_students as string[] | null) ?? [];
-
-        // only add if not already present
-        if (!current.includes(offer.student_id)) {
-          const updated = [...current, offer.student_id];
-
-          const { error: updateTaskErr } = await supabase
-            .from("tasks")
-            .update({
-              assigned_students: updated,
-              status: "active",
-            })
-            .eq("id", offer.task_id);
-
-          if (updateTaskErr) {
-            console.error("Error updating task:", updateTaskErr);
-            // don’t fail the whole request for this, but log it
-          }
-        }
-      } else {
-        console.error("Error loading task for offer:", taskErr);
+      if (updateTaskErr) {
+        console.error("Error updating task:", updateTaskErr);
       }
     }
+
+
+    // 3c. Check if assignment already exists
+const { data: existingAssignment } = await supabase
+  .from("task_assignments")
+  .select("id")
+  .eq("task_id", offer.task_id)
+  .maybeSingle();
+
+if (existingAssignment) {
+  console.warn("Task already has an assignment, skipping insert");
+} else {
+
+
+    // 3c. 🔥 INSERT INTO task_assignments (THIS IS THE MISSING PIECE)
+  const { error: assignmentErr } = await supabase
+  .from("task_assignments")
+  .insert({
+    task_id: offer.task_id,
+    student_id: offer.student_id,
+    status: "assigned",
+  });
+
+
+    console.log("ASSIGNMENT INSERT RESULT:", assignmentErr ? assignmentErr : "OK");
+
+
+    if (assignmentErr) {
+      console.error("Error creating task assignment:", assignmentErr);
+      // not throwing — because task assignment is already done logically
+    }
+  }
+  } else {
+    console.error("Error loading task for offer:", taskErr);
+  }
+}
+
 
     return NextResponse.json({
       success: true,

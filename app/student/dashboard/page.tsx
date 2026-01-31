@@ -231,14 +231,34 @@ if (error || !data) {
     setActiveTasks(tasksActive || []);
 
 
-    // Completed tasks
-const { data: tasksCompleted } = await supabase
-.from("tasks")
-.select("*")
-.contains("assigned_students", [studentProfile.user_id])
-.eq("status", "completed");
 
-setCompletedTasks(tasksCompleted || []);
+// ✅ Latest completed task from ledger (task_feedback)
+// ✅ Completed tasks (LEDGER ENTRIES)
+const { data: ledgerEntries, error: ledgerErr } = await supabase
+  .from("task_feedback")
+  .select(`
+    id,
+    created_at,
+    outcome,
+    comment,
+    quality_rating,
+    reliability_rating,
+    would_rehire,
+    tasks (
+      id,
+      title,
+      short_description
+    )
+  `)
+  .eq("student_id", studentProfile.user_id)
+  .order("created_at", { ascending: false })
+  .limit(1); // 🔥 ONLY LATEST for dashboard
+
+console.log("📒 Ledger entries:", ledgerEntries, ledgerErr);
+
+setCompletedTasks(ledgerEntries || []);
+
+
 
 
     setLoading(false);
@@ -543,100 +563,96 @@ if (!studentProfile) {
 <section className="space-y-4">
   <h2 className="text-lg sm:text-xl font-semibold">Completed Tasks</h2>
 
-  {completedTasks.length > 0 ? (
-    completedTasks.map((task) => (
-     <Card
-  key={task.id}
-  className="rounded-xl bg-white border border-gray-200 shadow-[0_4px_20px_rgba(0,0,0,0.03)] hover:shadow-[0_6px_26px_rgba(0,0,0,0.05)] transition-all duration-300 overflow-hidden"
->
-  <div className="flex">
+{completedTasks.length > 0 ? (
+  completedTasks.map((entry) => (
+    <Card
+      key={entry.id}
+      className="rounded-xl bg-white border border-gray-200 shadow-[0_4px_20px_rgba(0,0,0,0.03)] hover:shadow-[0_6px_26px_rgba(0,0,0,0.05)] transition-all duration-300 overflow-hidden"
+    >
+      <div className="flex">
+        {/* LEFT SUCCESS STRIP */}
+        <div className="w-2 bg-green-500" />
 
-    {/* LEFT SUCCESS STRIP */}
-    <div className="w-2 bg-green-500" />
+        <CardContent className="p-5 flex-1">
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+            {/* LEFT SECTION */}
+            <div className="flex-1 min-w-0">
+              <div className="flex items-start gap-4 mb-3">
+                {/* COMPLETION BADGE */}
+                <div className="h-12 w-12 rounded-xl bg-green-500 text-white flex items-center justify-center shadow-md shadow-green-300/40">
+                  ✓
+                </div>
 
-    <CardContent className="p-5 flex-1">
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+                <div className="min-w-0">
+                  <h3 className="font-semibold text-xl truncate text-gray-900 tracking-tight">
+                    {entry.tasks?.title || "Task"}
+                  </h3>
 
-        {/* LEFT SECTION */}
-        <div className="flex-1 min-w-0">
-          <div className="flex items-start gap-4 mb-3">
+                  <p className="text-sm font-medium text-green-600 mt-1">
+                    Completed Successfully
+                  </p>
+                </div>
+              </div>
 
-            {/* COMPLETION BADGE */}
-            <div className="h-12 w-12 rounded-xl bg-green-500 text-white flex items-center justify-center shadow-md shadow-green-300/40">
-              ✓
-            </div>
+              {/* RATING */}
+              <div className="flex items-center gap-2 mt-2">
+                <Star className="h-5 w-5 text-yellow-500 fill-yellow-500" />
+                <p className="text-sm font-medium text-gray-700">
+                  {entry.quality_rating
+                    ? `${entry.quality_rating} / 5`
+                    : "Not Rated"}
+                </p>
+              </div>
 
-            <div className="min-w-0">
-              <h3 className="font-semibold text-xl truncate text-gray-900 tracking-tight">
-                {task.title}
-              </h3>
+              {/* FEEDBACK */}
+              {entry.comment && (
+                <p className="text-sm text-gray-600 mt-3 italic border-l-4 border-green-200 pl-3 leading-relaxed">
+                  “{entry.comment}”
+                </p>
+              )}
 
-              <p className="text-sm font-medium text-green-600 mt-1">
-                Completed Successfully
-              </p>
-            </div>
-          </div>
-
-          {/* RATING */}
-          <div className="flex items-center gap-2 mt-2">
-            <Star className="h-5 w-5 text-yellow-500 fill-yellow-500" />
-            <p className="text-sm font-medium text-gray-700">
-              {task.org_rating ? `${task.org_rating} / 5` : "Not Rated"}
-            </p>
-          </div>
-
-          {/* FEEDBACK */}
-          {task.org_feedback && (
-            <p className="text-sm text-gray-600 mt-3 italic border-l-4 border-green-200 pl-3 leading-relaxed">
-              “{task.org_feedback}”
-            </p>
-          )}
-
-          {/* COMPLETION DATE */}
-          <p className="text-xs text-gray-500 mt-4 border-t border-gray-100 pt-3">
-            Completed on:{" "}
-            {task.completed_at
-              ? new Date(task.completed_at).toLocaleDateString("en-US", {
+              {/* COMPLETION DATE */}
+              <p className="text-xs text-gray-500 mt-4 border-t border-gray-100 pt-3">
+                Completed on:{" "}
+                {new Date(entry.created_at).toLocaleDateString("en-US", {
                   year: "numeric",
                   month: "short",
                   day: "numeric",
-                })
-              : "—"}
-          </p>
-        </div>
+                })}
+              </p>
+            </div>
 
-        {/* VIEW DETAILS BUTTON */}
-        <div className="lg:self-center lg:pl-4">
-          <Button
-            variant="outline"
-            size="lg"
-            className="rounded-full border-2 border-green-600 text-green-600 hover:bg-green-50 transition-all w-full lg:w-auto font-medium"
-            asChild
-          >
-            <Link href={`/student/tasks/${task.id}`}>
-              View Summary
-              <ArrowRight className="h-4 w-4 ml-2" />
-            </Link>
-          </Button>
-        </div>
-
+            {/* VIEW DETAILS BUTTON */}
+            <div className="lg:self-center lg:pl-4">
+              <Button
+                variant="outline"
+                size="lg"
+                className="rounded-full border-2 border-green-600 text-green-600 hover:bg-green-50 transition-all w-full lg:w-auto font-medium"
+                asChild
+              >
+                <Link href={`/student/tasks/${entry.tasks?.id}`}>
+                  View Summary
+                  <ArrowRight className="h-4 w-4 ml-2" />
+                </Link>
+              </Button>
+            </div>
+          </div>
+        </CardContent>
       </div>
-    </CardContent>
-  </div>
-</Card>
-
-    ))
-  ) : (
-    <Card className="rounded-2xl">
-      <CardContent className="p-6">
-        <EmptyState
-          icon={<Star className="h-8 w-8 text-muted-foreground" />}
-          title="No completed tasks yet"
-          description="After completing tasks, your ratings and feedback will appear here."
-        />
-      </CardContent>
     </Card>
-  )}
+  ))
+) : (
+  <Card className="rounded-2xl">
+    <CardContent className="p-6">
+      <EmptyState
+        icon={<Star className="h-8 w-8 text-muted-foreground" />}
+        title="No completed tasks yet"
+        description="After completing tasks, your ratings and feedback will appear here."
+      />
+    </CardContent>
+  </Card>
+)}
+
 </section>
 
           </div>
