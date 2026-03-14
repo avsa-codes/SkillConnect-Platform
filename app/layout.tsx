@@ -6,11 +6,13 @@ import { GoogleAnalytics } from "@next/third-parties/google"
 import { AuthProvider } from "@/context/auth-context"
 import { Toaster } from "@/components/ui/sonner"
 import "./globals.css"
+import InstallPrompt from "@/components/install-prompt"
 
 const _geist = Geist({ subsets: ["latin"] })
 const _geistMono = Geist_Mono({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
+  
   title: {
     default: "InstaTask SkillConnect",
     template: "%s | InstaTask SkillConnect",
@@ -19,6 +21,8 @@ export const metadata: Metadata = {
     "Work on real projects, get paid, and build your career with InstaTask SkillConnect. A curated marketplace connecting students with companies.",
 
   applicationName: "InstaTask",
+
+  manifest: "/manifest.json",
 
   metadataBase: new URL("https://instatask.in"),
 
@@ -68,11 +72,16 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
+    <head>
+    <link rel="manifest" href="/manifest.json" />
+  </head>
       <body className="font-sans antialiased">
         <AuthProvider>
-          {children}
-          <Toaster />
-        </AuthProvider>
+  {children}
+  <Toaster />
+</AuthProvider>
+
+<InstallPrompt />
 
         {/* Vercel Analytics */}
         <Analytics />
